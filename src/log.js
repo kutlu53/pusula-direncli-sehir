@@ -11,7 +11,7 @@ export const Log = {
     write(KEY, all);
   },
   csv() {
-    const cols = ['zaman', 'ogrenci', 'olay', 'soru', 'beceri', 'secilen', 'dogru', 'sure_sn', 'adim'];
+    const cols = ['zaman', 'ogrenci', 'olay', 'soru', 'beceri', 'secilen', 'dogru', 'sure_sn', 'adim', 'metin'];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     return [cols.join(';'), ...read(KEY, []).map((r) => cols.map((c) => esc(r[c])).join(';'))].join('\r\n');
   },

@@ -69,6 +69,13 @@ export const PLACES = {
   teleferik: { x: -55, z: coastZ(-55) + 14, ad: 'Teleferik' },
 };
 
+// 2. bölümde havadan aranan riskli yerler
+export const RISKS = {
+  taskin: { x: riverX(100), z: 100, ad: 'Irmak kenarındaki evler' },
+  yamac: { x: -98, z: 58, ad: 'Dik yamaçtaki evler' },
+  orman: { x: 150, z: 250, ad: 'Kesilen orman' },
+};
+
 export function bridgeDeck(x) {
   const t = (x - PLACES.kopru.x) / BRIDGE_HALF;
   return 2.0 + 1.8 * Math.cos(t * Math.PI / 2);

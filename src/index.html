@@ -19,12 +19,16 @@
       <div id="joy"><div id="joy-knob"></div></div>
       <div id="tbtns">
         <button id="t-menu" aria-label="Menü">☰</button>
+        <button id="t-note" aria-label="Defter">📓</button>
+        <button id="t-drone" aria-label="Drone">🛸</button>
         <button id="t-hint" aria-label="İpucu">💡</button>
         <button id="t-map" aria-label="Harita">🗺️</button>
         <button id="t-jump" aria-label="Zıpla">⤒</button>
       </div>
     </div>
-    <div id="keys">WASD yürü · Shift koş · Boşluk zıpla · Fare bak · E etkileşim · M harita · H ipucu · Esc menü</div>
+    <div id="keys">WASD yürü · Shift koş · Boşluk zıpla · Fare bak · E etkileşim · M harita · N defter · H ipucu<span class="drone-key"> · F drone</span> · Esc menü</div>
+    <div id="viewfinder"><span>DRONE KAMERASI</span></div>
+    <div id="flash"></div>
   </div>
 
   <div id="dialog" class="hidden">
@@ -58,6 +62,25 @@
     </div>
   </div>
 
+  <div id="activity" class="overlay hidden">
+    <div class="panel act-panel">
+      <div class="label">📓 KÂŞİF DEFTERİ</div>
+      <h2 id="act-title"></h2>
+      <div id="act-body"></div>
+      <div id="act-feedback" class="hidden"></div>
+      <button id="act-next" class="hidden">Devam</button>
+    </div>
+  </div>
+
+  <div id="notebook" class="overlay hidden">
+    <div class="panel">
+      <div class="label">📓 KÂŞİF DEFTERİ</div>
+      <h2>Öğrendiklerim</h2>
+      <div id="notebook-body"></div>
+      <button id="notebook-close">Defteri kapat</button>
+    </div>
+  </div>
+
   <div id="menu" class="overlay hidden">
     <div class="panel">
       <h2>Duraklatıldı</h2>
@@ -69,11 +92,11 @@
 
   <div id="end" class="overlay hidden">
     <div class="panel">
-      <div class="label">1. BÖLÜM TAMAMLANDI</div>
-      <h1>Kayıp Harita</h1>
-      <div class="badge">🧭<span>Harita Çırağı</span></div>
+      <div class="label" id="end-label"></div>
+      <h1 id="end-title"></h1>
+      <div class="badge"><i id="end-icon"></i><span id="end-badge"></span></div>
       <p id="end-summary"></p>
-      <p class="muted">2. Bölüm: Gökten Bakış — yakında</p>
+      <p class="muted" id="end-soon"></p>
       <button id="end-csv">Araştırma verisini indir (CSV)</button>
       <button id="end-free">Şehri gezmeye devam et</button>
     </div>
@@ -83,7 +106,7 @@
     <div class="panel title-panel">
       <div class="label">ORDU · ALTINORDU</div>
       <h1>Pusula<span>Dirençli Şehir</span></h1>
-      <p>Fırtına, Hasan Usta'nın son haritasını dört parçaya ayırdı. Pusulanı al, parçaları bul ve şehrin sırlarını keşfet.</p>
+      <p>Fırtına, Hasan Usta'nın son haritasını dört parçaya ayırdı. Pusulanı al, parçaları bul, sonra drone ile şehrin riskli yerlerini gökyüzünden keşfet.</p>
       <label>Öğrenci kodu (isim yazma)<input id="code" maxlength="12" placeholder="örn. A07"></label>
       <button id="start">Yeni oyun</button>
       <button id="continue" class="hidden">Kaldığın yerden devam et</button>

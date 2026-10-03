@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import {
   WORLD, terrainHeight, groundHeight, coastZ, riverX, fbm, rand, smoothstep,
-  PLACES, PIER, BOZTEPE, BOZ_TOP, BRIDGE_Z, BRIDGE_HALF, bridgeDeck,
+  PLACES, PIER, BOZTEPE, BOZ_TOP, BRIDGE_Z, BRIDGE_HALF, bridgeDeck, RISKS,
 } from './terrain.js';
 
 const FOG = 0xc4dcec;
@@ -80,6 +80,8 @@ function buildTerrain() {
       if (s < 165 && h < 9 && x > -165 && x < 345) c.lerp(c2.set(0xa9ad98), 0.55);
       c.lerp(c2.set(0x8d877a), smoothstep(0.22, 0.42, slope));
       c.lerp(c2.set(0xa3a784), smoothstep(110, 190, h) * 0.7);
+      // Kesilen orman: çıplak toprak
+      c.lerp(c2.set(0x9a7b55), smoothstep(42, 26, Math.hypot(x - RISKS.orman.x, z - RISKS.orman.z)) * 0.85);
     }
     c.multiplyScalar(0.9 + n * 0.2);
     colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
@@ -189,6 +191,48 @@ function buildCoastRoad(scene) {
   const road = new THREE.Mesh(geo, std(0x55585c, { roughness: 1 }));
   road.receiveShadow = true;
   scene.add(road);
+}
+
+// ---------- Riskli yerleşmeler (2. bölüm) ----------
+function buildRiskHouses(scene, colliders, buildings) {
+  const walls = [0xf2e6d0, 0xe8d2b8, 0xd9e3ea, 0xf0d9c4].map((c) => std(c)), roofMat = std(0xb5523a);
+  const house = (x, z, k) => {
+    const y = terrainHeight(x, z), w = 6 + rand(k, 51) * 2, d = 6 + rand(k, 52) * 2;
+    scene.add(box(w, 9, d, walls[k % 4], x, y + 0.5, z));
+    const roof = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.72, 0.45, 4).rotateY(Math.PI / 4), roofMat));
+    roof.scale.set(w * 1.05, 4.5, d * 1.05); roof.position.set(x, y + 5, z);
+    scene.add(roof);
+    colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+    buildings.push({ x, z, w, d, risk: true });
+  };
+  for (let i = 0; i < 10; i++) { // taşkın yatağı
+    const z = RISKS.taskin.z - 32 + i * 7, side = i % 2 ? 1 : -1;
+    house(riverX(z) + side * (19 + rand(i, 53) * 5), z, i);
+  }
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) // dik yamaç
+    if (i || j) house(RISKS.yamac.x + i * 11, RISKS.yamac.z + j * 11, 20 + i * 3 + j);
+  [[-12, -8], [10, -14], [14, 9], [-9, 13]].forEach(([dx, dz], i) => house(RISKS.orman.x + dx, RISKS.orman.z + dz, 40 + i));
+  const stump = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.6, 0.8, 7).translate(0, 0.4, 0), std(0x7a5a3a), 46);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < 46; i++) {
+    const a = rand(i, 61) * 6.28, r = 6 + rand(i, 62) * 30;
+    const x = RISKS.orman.x + Math.cos(a) * r, z = RISKS.orman.z + Math.sin(a) * r;
+    stump.setMatrixAt(i, m.makeTranslation(x, terrainHeight(x, z), z));
+  }
+  scene.add(shadowed(stump));
+}
+
+function buildDrone(scene) {
+  const g = new THREE.Group(), dark = std(0x2b3038), rotors = [];
+  g.add(box(1.1, 0.35, 1.1, std(0xe0892f), 0, 0.5, 0), box(2.6, 0.1, 0.16, dark, 0, 0.55, 0), box(0.16, 0.1, 2.6, dark, 0, 0.55, 0));
+  for (const [x, z] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3]]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.04, 0.14), std(0x9aa3ab));
+    r.position.set(x, 0.72, z);
+    g.add(r); rotors.push(r);
+  }
+  g.position.set(BOZTEPE.x + 4, BOZ_TOP, BOZTEPE.z - 3);
+  scene.add(g);
+  return { model: g, rotors };
 }
 
 // ---------- Bitki örtüsü ----------
@@ -401,8 +445,11 @@ export function buildWorld({ lowGfx = false } = {}) {
     { ...PLACES.tasbasi, r: 26 }, { ...PLACES.teleferik, r: 13 }, { ...PLACES.start, r: 24 },
     { ...PLACES.findik, r: 34 }, { ...BOZTEPE, r: 22 }, { x: PLACES.kopru.x - 38, z: BRIDGE_Z, r: 14 },
     { x: PLACES.kopru.x + 38, z: BRIDGE_Z, r: 14 },
+    { ...RISKS.taskin, r: 46 }, { ...RISKS.yamac, r: 26 }, { ...RISKS.orman, r: 40 },
   ];
   const buildings = buildCity(scene, colliders, avoid);
+  buildRiskHouses(scene, colliders, buildings);
+  const drone = buildDrone(scene);
   buildCoastRoad(scene);
   buildTrees(scene, avoid);
   const { flag, cabins, curve } = buildLandmarks(scene, colliders);
@@ -437,8 +484,10 @@ export function buildWorld({ lowGfx = false } = {}) {
     },
     // Işık sütunu yalnızca hedefe yaklaşınca görünür; öğrenci yönü pusulayla bulmalı
     showMarker(near) { marker.visible = !!marker.userData.active && near; },
-    update(dt, t, playerPos) {
+    update(dt, t, playerPos, droneFlying = false) {
       waterU.uT.value = t;
+      drone.model.visible = !droneFlying;
+      drone.rotors.forEach((r) => { r.rotation.y += dt * 9; });
       sun.position.copy(playerPos).addScaledVector(SUN_DIR, 200);
       sun.target.position.copy(playerPos);
       piece.rotation.y += dt * 1.6;
