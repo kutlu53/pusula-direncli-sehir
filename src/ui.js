@@ -815,6 +815,66 @@ export function poster(spec, imza) {
   });
 }
 
+// 9) İl haritası: adı silinmiş ilçeyi göreceli konum ipucuyla bul
+const IW = 600, IH = 500;
+const ilP = ([lon, lat]) => [(lon - 36.9) / 1.3 * IW, (41.26 - lat) / 0.92 * IH];
+export function district(ilceler, hedef, bulunan) {
+  return new Promise((resolve) => {
+    const h = ilceler[hedef];
+    const body = actOpen(`Ordu il haritası: ${bulunan.length + 1}. durak`, 'İpucunu oku ve adı silinmiş ilçelerden doğru olanına dokun.');
+    const clue = el('p', 'act-task', '🧭 ' + h.ipucu), cv = el('canvas', 'act-canvas ilce-canvas'), noteEl = el('p', 'act-note', ' ');
+    cv.width = IW; cv.height = IH;
+    const [hx, hy] = ilP(h.k), [ax, ay] = ilP(ilceler.altinordu.k);
+    Object.assign(cv.dataset, { fx: hx / IW, fy: hy / IH, wx: ax / IW, wy: ay / IH });
+    const g = cv.getContext('2d');
+    let yanlis = 0, bitti = false;
+    const acik = (k) => !ilceler[k].gizli || bulunan.includes(k) || (bitti && k === hedef);
+    const draw = () => {
+      const k = markScale(cv);
+      g.fillStyle = '#e9dcae'; g.fillRect(0, 0, IW, IH);
+      // deniz: kıyı ilçelerinin hemen kuzeyinden geçen çizginin üstü
+      const coast = Object.values(ilceler).filter((i) => i.kiyi).map((i) => ilP(i.k)).sort((a, b) => a[0] - b[0]);
+      g.fillStyle = '#5aa6d6'; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, coast[0][1] - 4);
+      coast.forEach(([x, y]) => g.lineTo(x, y - 14)); g.lineTo(IW, coast[coast.length - 1][1] - 2); g.lineTo(IW, 0); g.fill();
+      g.fillStyle = 'rgba(122,82,54,.16)'; g.fillRect(0, IH * 0.62, IW, IH * 0.38); // güney: yüksek kesim
+      g.font = `italic bold ${Math.round(15 * k)}px Segoe UI, sans-serif`; g.fillStyle = '#1d5f86'; g.textAlign = 'center';
+      g.fillText('K A R A D E N İ Z', IW * 0.6, 26 * k);
+      g.font = `italic ${Math.round(11 * k)}px Segoe UI, sans-serif`; g.fillStyle = '#6b5a2e'; g.textAlign = 'left';
+      g.fillText('Ordu ili (şematik)', 8, IH - 8);
+      for (const [key, i] of Object.entries(ilceler)) {
+        const [x, y] = ilP(i.k), open = acik(key);
+        g.fillStyle = key === 'altinordu' ? '#c2452f' : open ? (i.gizli ? '#1f7a3a' : '#17313a') : '#e0a52f';
+        g.beginPath(); g.arc(x, y, (open ? 6 : 10) * k, 0, 7); g.fill();
+        g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.stroke();
+        g.font = `bold ${Math.round((open ? 12 : 14) * k)}px Segoe UI, sans-serif`; g.textAlign = 'center';
+        g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)';
+        const t = open ? i.ad : '?';
+        if (open) g.strokeText(t, x, y + 20 * k);
+        g.fillStyle = open ? '#17313a' : '#2a1c00';
+        g.fillText(t, x, open ? y + 20 * k : y + 5 * k);
+      }
+      g.fillStyle = 'rgba(246,239,220,.9)'; g.fillRect(IW - 48, IH - 70, 38, 58);
+      g.fillStyle = '#17313a'; g.font = 'bold 16px Segoe UI, sans-serif'; g.textAlign = 'center'; g.fillText('K', IW - 29, IH - 52);
+      g.beginPath(); g.moveTo(IW - 29, IH - 46); g.lineTo(IW - 22, IH - 20); g.lineTo(IW - 29, IH - 26); g.lineTo(IW - 36, IH - 20); g.closePath(); g.fill();
+    };
+    cv.onclick = (e) => {
+      if (bitti) return;
+      const [px, py] = canvasPos(cv, e);
+      let best = null, bd = 34 * markScale(cv);
+      for (const [key, i] of Object.entries(ilceler)) { const [x, y] = ilP(i.k), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = key; } }
+      if (!best) return;
+      if (best === hedef) {
+        bitti = true; noteEl.textContent = ' '; draw();
+        return actFinish(`Doğru! Burası ${h.ad}.`, resolve, { yanlis });
+      }
+      yanlis++;
+      noteEl.textContent = acik(best) ? `❌ Orası ${ilceler[best].ad}. Adı silinmiş (sarı, soru işaretli) ilçelerden birini seç.` : '❌ Aradığın ilçe orası değil. İpucundaki yönü tekrar oku.';
+    };
+    body.append(clue, cv, noteEl);
+    draw();
+  });
+}
+
 // ---------- Defter görünümü ----------
 export function showNotebook(entries) {
   const box = $('notebook-body');

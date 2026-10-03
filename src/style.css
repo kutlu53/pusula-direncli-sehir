@@ -285,3 +285,7 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 #stats.alarm { background: #e0452f; color: #fff; }
 @media (max-width: 600px) { .poster-left { width: 60%; margin: 0 auto; } }
 @media (max-height: 480px) { .poster-msg { padding: 3px 7px; font-size: 12px; margin-bottom: 3px; } .poster-left { width: min(30%, 60vh); } }
+
+/* ---------- 7. bölüm: il haritası ---------- */
+.ilce-canvas { width: min(100%, 70vh) !important; cursor: pointer !important; }
+@media (max-height: 480px) { .ilce-canvas { width: min(100%, 78vh) !important; } }

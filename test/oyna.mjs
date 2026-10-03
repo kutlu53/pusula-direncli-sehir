@@ -117,7 +117,7 @@ async function answerQuiz() {
   const info = await page.evaluate(() => {
     const metin = document.querySelector('#quiz-text').textContent, o = window.__oyun;
     const all = [];
-    for (const s of o.STEPS) { if (s.soru) all.push(s.soru); for (const h of s.hedefler || []) all.push(h.soru); }
+    for (const s of o.STEPS) { if (s.soru) all.push(s.soru); for (const h of s.hedefler || []) all.push(h.soru); for (const a of s.akis || []) if (a.soru) all.push(a.soru); }
     const q = all.find((x) => x.metin === metin);
     return q ? { id: q.id, dogru: q.dogru, n: q.secenekler.length } : null;
   });
@@ -135,7 +135,16 @@ async function answerQuiz() {
 // ---- Etkinlikler
 async function doActivity() {
   const has = (q) => page.$(q).then((h) => !!h);
-  if (await has('.poster-canvas')) {
+  if (await has('.ilce-canvas')) {
+    const d = await page.$eval('.ilce-canvas', (c) => ({ ...c.dataset }));
+    await clickCanvas('.ilce-canvas', +d.wx, +d.wy); await sleep(150); // önce yanlış: Altınordu
+    const w = await text('#act-body .act-note');
+    if (!w.includes('Altınordu')) report.hatalar.push('İlçe: yanlış dokunuşta ilçe adı söylenmedi: ' + w.slice(0, 40));
+    await clickCanvas('.ilce-canvas', +d.fx, +d.fy); await sleep(200);
+    await shot('act_ilce_' + Date.now() % 100000);
+    if (!(await vis('#act-next'))) throw new Error('İlçe bulunamadı: ' + await text('#act-body .act-task'));
+    note('İl haritası: ' + await text('#act-feedback'));
+  } else if (await has('.poster-canvas')) {
     await page.type('.poster-title', 'Dere Yatağı Ev Değildir!');
     const msgs = await page.$$('.poster-msg');
     for (const i of [0, 1, 2]) await msgs[i].click(); // 1. mesaj yanlış bilgi

@@ -4,7 +4,7 @@ import { buildWorld } from './world.js';
 import { Player } from './player.js';
 import { Drone } from './drone.js';
 import * as ui from './ui.js';
-import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS } from './story.js';
+import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS, ILCELER } from './story.js';
 import { Log } from './log.js';
 import { PLACES, M_PER_UNIT, riskAt, slopeAt } from './terrain.js';
 
@@ -40,7 +40,7 @@ resize();
 let mode = 'title'; // title | play | busy | map | menu | defter | end
 let state = fresh();
 function fresh() {
-  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0, plan: null, uyarilan: [], kalan: null };
+  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0, plan: null, uyarilan: [], kalan: null, ilceler: [] };
 }
 const step = () => STEPS[state.step];
 // Adımın hedefi: sabit yer ya da oyuncunun planında seçtiği yapı (önüne varılır)
@@ -71,7 +71,8 @@ function refresh() {
       (drone.active ? 'Hedefin üstüne gelince fotoğraf çek.' : `Drone'u uçur: ${isTouch ? '🛸 düğmesi' : 'F tuşu'}.`);
   }
   ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : bolum === 3 ? `📡 ${state.cihazlar.length}/3` : bolum === 4 ? `🧪 ${state.deneyler}/2` : bolum === 5 ? `🏗️ ${state.plan ? 5 : 0}/5`
-      : s && s.tur === 'tahliye' ? `⏱ ${Math.max(0, Math.ceil(state.kalan))} sn` : `👪 ${state.uyarilan.length}/2`, puan: state.score });
+      : bolum === 7 ? `🚐 ${state.ilceler.length}/4`
+        : s && s.tur === 'tahliye' ? `⏱ ${Math.max(0, Math.ceil(state.kalan))} sn` : `👪 ${state.uyarilan.length}/2`, puan: state.score });
   $('stats').classList.toggle('alarm', !!s && s.tur === 'tahliye' && state.kalan < 40);
   world.setTarget(hedefOf(s), !!s && s.tur === 'parca');
   document.body.classList.toggle('has-drone', !!s && s.tur === 'drone');
@@ -257,9 +258,17 @@ async function ask(s, soru) {
   note(soru.beceri, soru.aciklama);
 }
 
-async function runActs(s, names) {
+async function runActs(s, names, veri = {}) {
   for (const name of names) {
-    if (name === 'isaretle') {
+    if (name === 'ilce') {
+      if (state.ilceler.includes(veri.ilce)) continue; // kayıttan devam edildiyse bulunanları atla
+      const r = await ui.district(ILCELER, veri.ilce, state.ilceler);
+      log({ olay: 'ilce', soru: 'B7E-' + veri.ilce, secilen: r.yanlis + ' yanlış dokunuş', dogru: r.yanlis ? 0 : 1, adim: s.id });
+      state.score += Math.max(20, 80 - r.yanlis * 20);
+      state.ilceler.push(veri.ilce);
+      note(ILCELER[veri.ilce].ad + ' nerede?', ILCELER[veri.ilce].ipucu);
+      save();
+    } else if (name === 'isaretle') {
       const res = await ui.markOnMap(ISARET, world.buildings);
       res.forEach((r, i) => log({ olay: 'isaretle', soru: 'B1E1-' + (i + 1), secilen: r.uzaklik + ' m', dogru: r.dogru ? 1 : 0, adim: s.id, metin: r.metin }));
       state.score += res.filter((r) => r.dogru).length * 50;
@@ -328,6 +337,11 @@ async function interact() {
   await ui.dialog(s.once);
   if (s.onEtkinlik) await runActs(s, s.onEtkinlik);
   if (s.soru) await ask(s, s.soru);
+  for (const a of s.akis || []) {
+    if (a.diyalog) await ui.dialog(a.diyalog);
+    else if (a.soru) await ask(s, a.soru);
+    else await runActs(s, [a.etkinlik], a);
+  }
   await finishStep(s);
 }
 

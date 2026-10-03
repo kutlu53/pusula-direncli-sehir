@@ -14,8 +14,9 @@ export const CHAPTERS = [
   { no: 4, ad: 'Yerin Altı, Göğün Üstü', rozet: 'Deney Ustası', simge: '🧪' },
   { no: 5, ad: 'Yeniden Kur', rozet: 'Şehir Plancısı', simge: '🏗️' },
   { no: 6, ad: 'Büyük Sınav', rozet: 'Afet Gönüllüsü', simge: '🚨' },
+  { no: 7, ad: 'Yardım Rotası', rozet: 'Ordu\'nun Haritacısı', simge: '🏅' },
 ];
-export const NEXT_CHAPTER = '7. Bölüm: Yardım Rotası (Ordu\'nun ilçeleri) — yakında';
+export const NEXT_CHAPTER = 'Oyunu tamamladın! Öğretmenin için araştırma verisini indirmeyi unutma.';
 
 // Adım türleri: npc / parca / nesne (hedefe yürü, E ile etkileşim) ve drone (havadan hedefleri fotoğrafla).
 // Sıra: once diyaloğu → onEtkinlik → soru → sonra diyaloğu → etkinlikler → kapanis diyaloğu.
@@ -417,7 +418,118 @@ export const STEPS = [
     ],
     bolumSonu: 6,
   },
+
+  // ---------------- 7. BÖLÜM: YARDIM ROTASI ----------------
+  // "akis": sırayla oynatılan diyalog, etkinlik ve sorular
+  {
+    id: 'rota', bolum: 7, hedef: PLACES.iskele, tur: 'npc',
+    gorev: 'İskeledeki Hasan Usta ile Ordu\'nun ilçelerine doğru yola çık',
+    once: [
+      ['Hasan Usta', 'Hazır mısın kâşif? Eski minibüsüm iskelenin başında. Bugün Altınordu\'dan çıkıp Ordu\'nun dört ilçesine gideceğiz.'],
+      ['Hasan Usta', 'İl haritamda dört ilçenin adı silinmiş. Onları adlarından değil, YERLERİNDEN bulacaksın: kimin batısında, kimin güneyinde, kıyıda mı, içeride mi?'],
+    ],
+    akis: [
+      { etkinlik: 'ilce', ilce: 'unye' },
+      { diyalog: [
+        ['Hasan Usta', 'Ünye\'deyiz. 8 Ağustos 2018\'de Ünye, Fatsa, İkizce, Çaybaşı ve Kumru\'da büyük bir sel yaşandı. Ünye\'deki Cevizdere Köprüsü yıkıldı.'],
+        ['Hasan Usta', 'Yerine yenisi 48 günde yapıldı. Ama asıl soru şu: köprü neden tam dere ağzında yıkıldı?'],
+      ] },
+      { soru: {
+        id: 'B7S1', beceri: 'Bilgiyi yeni yere uygulama (sel)',
+        metin: 'Cevizdere dağlardan gelip kıyıda denize ulaşır. Şiddetli yağışta dere ağzındaki köprü ve evler neden en çok zarar görür?',
+        secenekler: [
+          'Deniz suyu köprüyü çürüttüğü için',
+          'Bütün havzaya düşen yağmurun suyu dere ağzında toplandığı için',
+          'Dere ağzında hiç yağmur yağmadığı için',
+          'Kıyıda rüzgâr daha sert estiği için',
+        ], dogru: 1,
+        aciklama: 'Dağlara ve yamaçlara düşen yağmurun hepsi derede birleşir ve denize doğru akar. Dere ağzında su en çok, taşıdığı ağaç ve taş en fazladır.',
+      } },
+      { etkinlik: 'ilce', ilce: 'fatsa' },
+      { diyalog: [['Hasan Usta', 'Fatsa, Ordu\'nun en kalabalık ilçelerinden. Elekçi ve Bolaman ırmakları burada denize ulaşır; şehir ırmakların getirdiği düzlüğe kurulmuş.']] },
+      { soru: {
+        id: 'B7S2', beceri: 'Bilgiyi yeni yere uygulama (planlama)',
+        metin: 'Fatsa\'da ırmak kenarında boş bir taşkın yatağı var. Altınordu\'da öğrendiklerine göre burası için en doğru karar hangisi?',
+        secenekler: ['Yeni konutlar yapmak', 'Hastane yapmak', 'Park ve yeşil alan yapmak', 'Okul yapmak'], dogru: 2,
+        aciklama: 'Taşkın yatağı ırmağın taşınca yayıldığı yerdir. Park olursa su taşsa da can kaybı olmaz; ev, okul ya da hastane yapılırsa her taşkında tehlikeye girer.',
+      } },
+      { etkinlik: 'ilce', ilce: 'golkoy' },
+      { diyalog: [
+        ['Hasan Usta', 'Kıyıdan ayrıldık, dağlara tırmandık: Gölköy. Burada yamaçlar dik, yağış bol.'],
+        ['Hasan Usta', 'Ordu\'da en sık görülen afet heyelandır. Gölköy, Aybastı, Kabataş ve Ulubey\'de büyük heyelanlar yaşandı.'],
+      ] },
+      { soru: {
+        id: 'B7S3', beceri: 'Bilgiyi yeni yere uygulama (heyelan)',
+        metin: 'Gölköy\'de bir köylü sana yamacını gösteriyor. Hangisi heyelanın yaklaştığını haber veren bir işarettir?',
+        secenekler: [
+          'Yamaçtaki ağaçların çiçek açması',
+          'Zeminde yeni çatlaklar, eğilen ağaçlar ve direkler',
+          'Kuşların yamaca konması',
+          'Yamaçta otların uzaması',
+        ], dogru: 1,
+        aciklama: 'Toprak kaymaya başlarken zeminde ve duvarlarda yeni çatlaklar oluşur; ağaçlar, direkler ve çitler eğilir. Bu işaretler görülünce yamaçtan uzaklaşılır ve yetkililere haber verilir.',
+      } },
+      { etkinlik: 'ilce', ilce: 'mesudiye' },
+      { diyalog: [
+        ['Hasan Usta', 'İlin en güneyindeyiz: Mesudiye. Denizden uzak, yüksek ve serin. Melet Irmağı\'nın suları buralardan doğar.'],
+        ['Hasan Usta', 'Kuzey Anadolu Fay Hattı ilimizin güneyinden geçer. Mesudiye, Gölköy, Aybastı gibi güney ilçeleri bu yüzden depreme daha yakındır.'],
+      ] },
+      { soru: {
+        id: 'B7S4', beceri: 'Afet anında karar (deprem)',
+        metin: 'Deprem sırasında bina içindeysen doğru davranış hangisidir?',
+        secenekler: [
+          'Hemen merdivenlere ve asansöre koşmak',
+          'Balkona çıkıp aşağı bakmak',
+          'Pencerenin önünde beklemek',
+          'Çök, kapan, tutun: sağlam bir eşyanın yanına çök, başını ve enseni koru',
+        ], dogru: 3,
+        aciklama: 'Sarsıntı sırasında koşmak, merdiven ve asansör kullanmak tehlikelidir. "Çök, kapan, tutun" ile baş ve ense korunur; sarsıntı bitince bina sakin biçimde boşaltılır.',
+      } },
+    ],
+    sonra: [
+      ['Hasan Usta', 'Dört ilçe, üç farklı tehlike. Gördün mü? Bir yerin KONUMU, başına gelebilecekleri de anlatır.'],
+    ],
+    etkinlikler: ['ozet7'],
+    kapanis: [
+      ['Hasan Usta', 'Yolculuk bitti, kâşif. Son bir isteğim var: Boztepe\'ye çık. Her şeyin başladığı yere, şehre son bir kez yukarıdan bak.'],
+    ],
+  },
+  {
+    id: 'final', bolum: 7, hedef: PLACES.boztepe, tur: 'nesne', etiket: 'Şehre bak',
+    gorev: 'Boztepe\'nin zirvesine çık ve şehre son bir kez bak',
+    once: [
+      ['Sen', 'İşte Altınordu: yeni okul, taşkın parkı, ağaçlanan yamaç... Haritadaki her işaretin bir hikâyesi var artık.'],
+      ['Hasan Usta (telsiz)', 'Kırk yıl taşıdığım pusula artık senin, kâşif. Kuzeyi göstermekten fazlasını yapar: insana nerede durduğunu hatırlatır.'],
+      ['Elif Abla (telsiz)', 'Unutma: afetler doğaldır ama felaket olmak zorunda değildir. Bilen, hazırlanan ve doğru yere kuran şehirler dirençlidir.'],
+    ],
+    kapanis: [
+      ['Hasan Usta (telsiz)', 'Şimdi sıra kendi mahallende, kâşif. Etrafına haritacı gözüyle bak. Yolun açık olsun!'],
+    ],
+    bolumSonu: 7,
+  },
 ];
+
+// ---------------- 7. bölüm: Ordu il haritası (şematik; konumlar yaklaşık boylam-enlem) ----------------
+export const ILCELER = {
+  altinordu: { ad: 'Altınordu', k: [37.88, 40.98], kiyi: true },
+  unye: { ad: 'Ünye', k: [37.29, 41.13], kiyi: true, gizli: true,
+    ipucu: 'Kıyıda, Altınordu\'nun BATISINDA. Adı silinmiş iki kıyı ilçesinden daha batıda olanı.' },
+  fatsa: { ad: 'Fatsa', k: [37.50, 41.03], kiyi: true, gizli: true,
+    ipucu: 'Kıyıda, Ünye ile Perşembe\'nin ARASINDA.' },
+  persembe: { ad: 'Perşembe', k: [37.77, 41.07], kiyi: true },
+  gulyali: { ad: 'Gülyalı', k: [38.06, 40.96], kiyi: true },
+  ikizce: { ad: 'İkizce', k: [37.07, 41.06] }, caybasi: { ad: 'Çaybaşı', k: [37.12, 41.0] },
+  akkus: { ad: 'Akkuş', k: [37.02, 40.79] }, kumru: { ad: 'Kumru', k: [37.26, 40.87] }, korgan: { ad: 'Korgan', k: [37.35, 40.81] },
+  catalpinar: { ad: 'Çatalpınar', k: [37.45, 40.89] }, camas: { ad: 'Çamaş', k: [37.54, 40.9] }, kabatas: { ad: 'Kabataş', k: [37.45, 40.75] },
+  aybasti: { ad: 'Aybastı', k: [37.4, 40.68] }, gurgentepe: { ad: 'Gürgentepe', k: [37.6, 40.79] },
+  golkoy: { ad: 'Gölköy', k: [37.62, 40.69], gizli: true,
+    ipucu: 'İç kesimde, Altınordu\'nun GÜNEYBATISINDA. Gürgentepe\'nin hemen güneyinde.' },
+  ulubey: { ad: 'Ulubey', k: [37.76, 40.87] }, kabaduz: { ad: 'Kabadüz', k: [37.89, 40.86] },
+  mesudiye: { ad: 'Mesudiye', k: [37.77, 40.46], gizli: true,
+    ipucu: 'İlin en GÜNEYİNDEKİ ilçe; denizden en uzak olanı.' },
+};
+
+// ---------------- 6. bölüm: afet farkındalık afişi ----------------
 
 // ---------------- 6. bölüm: afet farkındalık afişi ----------------
 export const AFIS = {
@@ -608,6 +720,18 @@ CLOZE.ozet5 = {
     { sec: ['hava durumu', 'bütçe'], dogru: 'bütçe' }, ' birlikte düşünülür.',
   ],
   serbest: 'Belediye başkanı olsaydın şehrini afetlere karşı korumak için ilk ne yapardın? Neden?',
+};
+
+CLOZE.ozet7 = {
+  baslik: 'Ordu\'nun ilçelerini özetle',
+  defter: 'İl özetim',
+  parcalar: [
+    'Ünye ve Fatsa, Altınordu\'nun ', { sec: ['doğusunda', 'batısında', 'güneyinde'], dogru: 'batısında' }, ', ',
+    { sec: ['iç kesimde', 'kıyıda'], dogru: 'kıyıda' }, ' yer alır. Gölköy ve Mesudiye ilin ', { sec: ['güneyindedir', 'kuzeyindedir'], dogru: 'güneyindedir' },
+    '. Kıyıdaki dere ağızlarında ', { sec: ['deprem', 'sel', 'çığ'], dogru: 'sel' }, ', iç kesimdeki dik yamaçlarda ',
+    { sec: ['heyelan', 'sel'], dogru: 'heyelan' }, ', fay hattına yakın güney ilçelerinde ', { sec: ['sel', 'deprem'], dogru: 'deprem' }, ' riski öne çıkar.',
+  ],
+  serbest: 'Bu oyunda öğrendiğin en önemli şey neydi? Kendi mahallende neye dikkat edeceksin?',
 };
 
 export const FARKLAR = [
