@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:oyna": "node test/oyna.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
   },
   "devDependencies": {
     "vite": "^6.0.0",
-    "vite-plugin-singlefile": "^2.0.3"
+    "vite-plugin-singlefile": "^2.0.3",
+    "puppeteer-core": "^24.0.0"
   }
 }

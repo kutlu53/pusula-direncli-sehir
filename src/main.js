@@ -40,7 +40,7 @@ resize();
 let mode = 'title'; // title | play | busy | map | menu | defter | end
 let state = fresh();
 function fresh() {
-  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0 };
+  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0 };
 }
 const step = () => STEPS[state.step];
 const pieces = () => STEPS.slice(0, state.step).filter((s) => s.tur === 'parca').length;
@@ -52,7 +52,7 @@ function refresh() {
   let gorev = s ? s.gorev : 'Görevler tamamlandı! Şehri özgürce gez.';
   if (s && s.tur === 'sensor') {
     const c = s.cihazlar[state.cihazlar.length];
-    gorev = `${c.ad}: ${c.nereye} yerleştir (${state.cihazlar.length}/${s.cihazlar.length})`;
+    if (c) gorev = `${c.ad}: ${c.nereye} yerleştir (${state.cihazlar.length}/${s.cihazlar.length})`;
   }
   if (s && s.tur === 'drone') {
     gorev += ` (${state.fotolar.length}/${s.hedefler.length}). ` +
@@ -64,7 +64,7 @@ function refresh() {
   document.body.classList.toggle('drone', drone.active);
 }
 function save() {
-  state.x = player.pos.x; state.z = player.pos.z;
+  state.x = player.pos.x; state.z = player.pos.z; state.walked = player.walked;
   Log.save(state);
 }
 
@@ -76,7 +76,7 @@ function begin(saved) {
   state.cihazlar.forEach((c) => world.addDevice(c.x, c.z, c.t));
   mapRisk = false;
   player.place(state.x, state.z, 0);
-  player.walked = 0;
+  player.walked = state.walked;
   ui.showPanel('title', false); ui.showPanel('hud');
   refresh();
   mode = 'play';
@@ -324,12 +324,14 @@ async function photo(s) {
 let deneme = 0;
 async function placeDevice(s) {
   const c = s.cihazlar[state.cihazlar.length], p = player.pos;
-  const r = riskAt(p.x, p.z), ok = r === c.t && (c.t !== 'guvenli' || slopeAt(p.x, p.z) < 0.22);
+  // Toplanma alanı düz olmalı ve çevresinde (125 m) riskli alan ya da su bulunmamalı
+  const duz = slopeAt(p.x, p.z) < 0.22 && ![0, 1, 2, 3, 4, 5, 6, 7].some((k) => riskAt(p.x + Math.cos(k * Math.PI / 4) * 25, p.z + Math.sin(k * Math.PI / 4) * 25) !== 'guvenli');
+  const r = riskAt(p.x, p.z), ok = r === c.t && (c.t !== 'guvenli' || duz);
   log({ olay: 'cihaz', soru: 'B3C-' + c.t, secilen: r, dogru: ok ? 1 : 0, adim: s.id, metin: `${Math.round(p.x)},${Math.round(p.z)}` });
   if (!ok) {
     deneme++;
     const burasi = { sel: 'sel riski taşıyan bir yer', heyelan: 'heyelan riski taşıyan bir yamaç', guvenli: 'düşük riskli bir yer', su: 'su' }[r];
-    ui.toast(`Burası ${c.t === 'guvenli' && r === 'guvenli' ? 'düşük riskli ama fazla eğimli; daha düz bir yer bul' : burasi + '. ' + c.ad + ' için ' + c.nereye + ' gitmelisin'}. Haritandaki risk katmanına bak!`, 6500);
+    ui.toast(`Burası ${c.t === 'guvenli' && r === 'guvenli' ? 'düşük riskli ama eğimli ya da riskli bir alana çok yakın; daha içeride, düz bir yer bul' : burasi + '. ' + c.ad + ' için ' + c.nereye + ' gitmelisin'}. Haritandaki risk katmanına bak!`, 6500);
     return;
   }
   mode = 'busy'; unlock(); ui.setPrompt('');
@@ -360,6 +362,12 @@ $('menu-csv').onclick = $('end-csv').onclick = () => Log.download();
 $('menu-restart').onclick = () => { Log.clearSave(); ui.showPanel('menu', false); begin(null); };
 $('end-free').onclick = () => closeOverlay('end');
 if (Log.load()) $('continue').classList.remove('hidden');
+
+// Otomatik oynanış testi için durum erişimi (?test=1)
+if (qp.has('test')) {
+  window.__oyun = { player, drone, STEPS, ISARET, FARKLAR, KATMAN_YERLER, riskAt, slopeAt,
+    get state() { return state; }, get mode() { return mode; } };
+}
 
 // Deneme parametreleri: ?oto=1&adim=2&x=..&z=..&yon=90&harita=1&etkinlik=komsu&drone=1&son=1
 if (qp.has('oto')) {
@@ -415,7 +423,8 @@ renderer.setAnimationLoop(() => {
       const key = isTouch ? '' : 'E — ';
       let prompt = '';
       const st = step();
-      if (st && st.tur === 'sensor') prompt = key + '📡 ' + st.cihazlar[state.cihazlar.length].ad + ' yerleştir';
+      const cihaz = st && st.tur === 'sensor' && st.cihazlar[state.cihazlar.length];
+      if (cihaz) prompt = key + '📡 ' + cihaz.ad + ' yerleştir';
       else if (drone.active) prompt = droneTarget() ? key + '📷 Fotoğraf çek' : '';
       else if (ti && ti.dist < 6) prompt = key + (ti.s.tur === 'npc' ? 'Konuş' : ti.s.etiket || 'Harita parçasını al');
       ui.setPrompt(prompt);

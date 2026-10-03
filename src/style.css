@@ -253,3 +253,6 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
   .lab-goals { font-size: 12px; margin-top: 6px; }
   .lab-goals li { padding-top: 3px; padding-bottom: 3px; }
 }
+
+/* Bilgi kutuları dokunuşu ve fareyi engellemez; altındaki sahne sürüklenebilir */
+#toast, #quest, #stats, #compass, #keys { pointer-events: none; }
