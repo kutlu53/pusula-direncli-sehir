@@ -721,6 +721,100 @@ export function planBoard(spec, buildings) {
   });
 }
 
+// 8) Afiş: başlık yaz, doğru mesajları seç, renk seç; afiş tuvalde oluşur ve indirilebilir
+function wrapText(g, text, x, y, maxW, lh) {
+  let line = '';
+  for (const w of text.split(' ')) {
+    if (g.measureText(line + w).width > maxW && line) { g.fillText(line.trim(), x, y); y += lh; line = ''; }
+    line += w + ' ';
+  }
+  g.fillText(line.trim(), x, y);
+  return y + lh;
+}
+function drawPoster(cv, { baslik, mesajlar, renk, imza }) {
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = '#f6efdc'; g.fillRect(0, 0, W, H);
+  g.fillStyle = renk; g.fillRect(0, 0, W, 150);
+  g.fillStyle = '#fff'; g.font = 'bold 40px Segoe UI, sans-serif'; g.textAlign = 'center';
+  wrapText(g, baslik, W / 2, 68, W - 60, 46);
+  // resim: yamaçta ağaçlar, güvenli yerde ev, aşağıda ırmak
+  const y0 = 170;
+  g.fillStyle = '#cfe6f5'; g.fillRect(30, y0, W - 60, 190);
+  g.fillStyle = '#6fa34d'; g.beginPath(); g.moveTo(30, y0 + 70); g.lineTo(W * 0.55, y0 + 150); g.lineTo(W - 30, y0 + 150); g.lineTo(W - 30, y0 + 190); g.lineTo(30, y0 + 190); g.fill();
+  for (let x = 60; x < W * 0.5; x += 44) tree(g, x, y0 + 74 + (x - 30) * 0.2, 1.1);
+  house(g, W * 0.66, y0 + 150);
+  g.fillStyle = '#3d7fd0'; g.fillRect(W * 0.8, y0 + 150, W * 0.2 - 30, 40);
+  g.strokeStyle = renk; g.lineWidth = 4; g.strokeRect(30, y0, W - 60, 190);
+  let y = y0 + 240;
+  g.textAlign = 'left';
+  mesajlar.forEach((m, i) => {
+    g.fillStyle = renk; g.beginPath(); g.arc(52, y - 8, 17, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.font = 'bold 20px Segoe UI, sans-serif'; g.textAlign = 'center'; g.fillText(String(i + 1), 52, y - 1);
+    g.fillStyle = '#17313a'; g.font = 'bold 22px Segoe UI, sans-serif'; g.textAlign = 'left';
+    y = wrapText(g, m, 82, y, W - 115, 28) + 22;
+  });
+  g.fillStyle = renk; g.fillRect(0, H - 54, W, 54);
+  g.fillStyle = '#fff'; g.font = 'bold 15px Segoe UI, sans-serif'; g.textAlign = 'center';
+  g.fillText(`Afet anında 112'yi ara  ·  Hazırlayan: ${imza}`, W / 2, H - 22);
+}
+
+export function poster(spec, imza) {
+  return new Promise((resolve) => {
+    const body = actOpen('Afet farkındalık afişini hazırla',
+      `Afişine bir başlık yaz, ${spec.kacMesaj} doğru mesaj ve bir renk seç. Dikkat: listede yanlış bilgiler de var!`);
+    const wrap = el('div', 'lab-wrap'), left = el('div', 'poster-left'), right = el('div', 'lab-right');
+    const cv = el('canvas', 'poster-canvas'); cv.width = 480; cv.height = 680;
+    const title = el('input', 'poster-title'); title.maxLength = 34; title.placeholder = spec.varsayilanBaslik;
+    const chips = el('div', 'poster-msgs'), colors = el('div', 'lab-opts'), check = el('button', '', 'Afişi tamamla'), why = el('p', 'act-note', '');
+    const dl = el('button', 'lab-run hidden', '⬇ Afişi indir (resim)');
+    const sel = new Set();
+    let renk = spec.renkler[0][0], deneme = 0, bitti = false;
+    const draw = () => drawPoster(cv, { baslik: title.value.trim() || spec.varsayilanBaslik, renk, imza, mesajlar: spec.mesajlar.filter((_, i) => sel.has(i)).map((x) => x.m) });
+    title.oninput = draw;
+    spec.mesajlar.forEach((x, i) => {
+      const c = el('button', 'poster-msg', x.m);
+      c.onclick = () => {
+        if (bitti) return;
+        if (sel.has(i)) sel.delete(i); else if (sel.size < spec.kacMesaj) sel.add(i);
+        c.classList.remove('wrong');
+        [...chips.children].forEach((b, k) => b.classList.toggle('on', sel.has(k)));
+        check.disabled = sel.size !== spec.kacMesaj;
+        draw();
+      };
+      chips.appendChild(c);
+    });
+    spec.renkler.forEach(([hex, ad], i) => {
+      const b = el('button', i ? '' : 'on', ad);
+      b.style.borderBottom = `5px solid ${hex}`;
+      b.onclick = () => { renk = hex; [...colors.children].forEach((c) => c.classList.toggle('on', c === b)); draw(); };
+      colors.appendChild(b);
+    });
+    check.disabled = true;
+    check.onclick = () => {
+      deneme++;
+      const bad = [...sel].filter((i) => !spec.mesajlar[i].ok);
+      if (bad.length) {
+        bad.forEach((i) => chips.children[i].classList.add('wrong'));
+        why.textContent = '❌ ' + bad.map((i) => spec.mesajlar[i].neden).join(' ') + ' Bu mesajı çıkar, yerine doğru bir bilgi seç.';
+        return;
+      }
+      bitti = true; title.disabled = true; why.textContent = '';
+      show(check, false); show(dl);
+      actFinish('Afişin hazır! İndirip yazdırabilir, okulunda ya da mahallende asabilirsin.', resolve,
+        { baslik: title.value.trim() || spec.varsayilanBaslik, mesajlar: [...sel].map((i) => spec.mesajlar[i].m), renk, deneme });
+    };
+    dl.onclick = () => cv.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'afet_afisim.png'; a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    left.appendChild(cv);
+    right.append(el('span', 'poster-h', 'Başlık'), title, el('span', 'poster-h', `Mesajlar (${spec.kacMesaj} tane seç)`), chips, el('span', 'poster-h', 'Renk'), colors, why, check, dl);
+    wrap.append(left, right); body.appendChild(wrap);
+    draw();
+  });
+}
+
 // ---------- Defter görünümü ----------
 export function showNotebook(entries) {
   const box = $('notebook-body');

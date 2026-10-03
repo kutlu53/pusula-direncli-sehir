@@ -420,6 +420,7 @@ function buildBoats(scene) {
 export function buildWorld({ lowGfx = false } = {}) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(FOG, 0.0015);
+  scene.background = new THREE.Color(FOG);
 
   const sky = new Sky();
   sky.scale.setScalar(10000);
@@ -428,7 +429,8 @@ export function buildWorld({ lowGfx = false } = {}) {
   su.sunPosition.value.copy(SUN_DIR);
   scene.add(sky);
 
-  scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x6b7a4e, 1.7));
+  const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x6b7a4e, 1.7);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff1d6, 4.2);
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(lowGfx ? 1024 : 2048);
@@ -488,6 +490,28 @@ export function buildWorld({ lowGfx = false } = {}) {
   marker.visible = false;
   scene.add(marker);
 
+  // 6. bölüm fırtınası: yağmur, kararan gök ve ırmak boyunca yükselen taşkın suyu
+  const RAIN = lowGfx ? 500 : 1400, rainPos = new Float32Array(RAIN * 6), rainSeed = [];
+  for (let i = 0; i < RAIN; i++) rainSeed.push([(rand(i, 81) - 0.5) * 90, rand(i, 82) * 50, (rand(i, 83) - 0.5) * 90]);
+  const rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd5e4f0, transparent: true, opacity: 0.55, fog: false }));
+  rain.frustumCulled = false; rain.visible = false;
+  scene.add(rain);
+  const fPts = [], fIdx = [];
+  for (let z = -70, n = 0; z <= 440; z += 10, n++) {
+    fPts.push(riverX(z) - 40, 0, z, riverX(z) + 40, 0, z);
+    if (n > 0) { const a = (n - 1) * 2; fIdx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  }
+  const fGeo = new THREE.BufferGeometry();
+  fGeo.setAttribute('position', new THREE.Float32BufferAttribute(fPts, 3));
+  fGeo.setIndex(fIdx); fGeo.computeVertexNormals();
+  const flood = new THREE.Mesh(fGeo, new THREE.MeshStandardMaterial({ color: 0x7d7a62, transparent: true, opacity: 0.74, roughness: 0.3 }));
+  flood.visible = false;
+  scene.add(flood);
+  const calm = new THREE.Color(FOG), dark = new THREE.Color(0x8794a0);
+  let stormTarget = 0, storm = 0;
+
   const flagBase = flag.geometry.attributes.position.array.slice();
   const devices = [], planObjs = [], planCols = [];
 
@@ -513,6 +537,7 @@ export function buildWorld({ lowGfx = false } = {}) {
       devices.push(g);
     },
     clearDevices() { devices.forEach((d) => scene.remove(d)); devices.length = 0; },
+    setStorm(level) { stormTarget = level; }, // 0 = açık hava, 1 = en şiddetli
     // 5. bölümde oyuncunun planladığı yapılar dünyaya kurulur
     buildPlan(plan) {
       this.clearPlan();
@@ -557,8 +582,28 @@ export function buildWorld({ lowGfx = false } = {}) {
     },
     // Işık sütunu yalnızca hedefe yaklaşınca görünür; öğrenci yönü pusulayla bulmalı
     showMarker(near) { marker.visible = !!marker.userData.active && near; },
-    update(dt, t, playerPos, droneFlying = false) {
+    update(dt, t, playerPos, droneFlying = false, camPos = playerPos) {
       waterU.uT.value = t;
+      if (storm !== stormTarget) {
+        storm += Math.sign(stormTarget - storm) * Math.min(Math.abs(stormTarget - storm), dt * 0.25);
+        scene.fog.color.copy(calm).lerp(dark, storm);
+        scene.fog.density = 0.0015 + 0.0035 * storm;
+        scene.background.copy(scene.fog.color);
+        waterU.uFog.value.copy(scene.fog.color); waterU.uDens.value = scene.fog.density;
+        sky.visible = storm < 0.05;
+        sun.intensity = 4.2 * (1 - 0.55 * storm); hemi.intensity = 1.7 * (1 - 0.2 * storm);
+        rain.visible = storm > 0.05; rain.material.opacity = 0.55 * storm;
+        flood.visible = storm > 0.02; flood.position.y = -0.6 + 2.6 * storm;
+      }
+      if (rain.visible) {
+        for (let i = 0; i < RAIN; i++) {
+          const s = rainSeed[i];
+          s[1] -= 62 * dt; if (s[1] < -4) s[1] += 50;
+          rainPos.set([s[0], s[1], s[2], s[0] + 0.25, s[1] - 1.9, s[2]], i * 6);
+        }
+        rainGeo.attributes.position.needsUpdate = true;
+        rain.position.set(camPos.x, camPos.y - 12, camPos.z);
+      }
       drone.model.visible = !droneFlying;
       drone.rotors.forEach((r) => { r.rotation.y += dt * 9; });
       sun.position.copy(playerPos).addScaledVector(SUN_DIR, 200);

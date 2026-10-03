@@ -8,6 +8,7 @@ const OUT = process.argv[2] || new globalThis.URL('./cikti', import.meta.url).pa
 fs.mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const report = { hatalar: [], adimlar: [], notlar: [] };
+let reloaded = false;
 const note = (m) => { report.notlar.push(m); console.log('  ·', m); };
 
 const browser = await puppeteer.launch({
@@ -57,6 +58,16 @@ await page.click('#start');
 await sleep(500);
 if ((await G()).mode !== 'play') throw new Error('Oyun başlamadı');
 
+// BASLA=13 gibi bir ortam değişkeniyle oyun, önceki bölümler bitmiş sayılarak o adımdan başlatılır (uzun testi bölmek için)
+if (process.env.BASLA) {
+  await page.evaluate((adim) => window.__oyun.basla({ step: adim, code: 'BOT01', score: 2515, correct: 11, asked: 13, riskHarita: true, deneyler: 2,
+    fotolar: ['taskin', 'yamac', 'orman'], x: -8, z: -40,
+    cihazlar: [{ x: 270, z: 62, t: 'sel' }, { x: -34, z: 68, t: 'heyelan' }, { x: 70, z: 10, t: 'guvenli' }],
+    plan: { okul: { x: -8, z: -48 }, hastane: { x: 154, z: 132 }, konut: { x: -128, z: 180 }, park: { x: 178, z: -54 }, agac: { x: -200, z: -84 } } }), +process.env.BASLA);
+  reloaded = true;
+  note('Oyun ' + process.env.BASLA + '. adımdan başlatıldı');
+}
+
 // ---- Yürüme: hedefe dön, W+Shift bas, takılırsa yandan dolaş
 let stuckTotal = 0;
 async function walkTo(t, radius = 4, limitS = 240, until = null) {
@@ -83,6 +94,23 @@ async function walkTo(t, radius = 4, limitS = 240, until = null) {
   } finally { await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); }
 }
 
+// Hedef ırmağın öbür yakasındaysa önce köprüden geç (bir oyuncunun yapacağı gibi)
+async function go(t, radius = 4, limitS = 240, until = null) {
+  const bx = await page.evaluate(() => window.__oyun.STEPS[2].hedef.x), s = await G();
+  let extra = 0, stuck = 0;
+  if ((s.x < bx) !== (t.x < bx) && Math.abs(t.x - bx) > 12) {
+    const from = s.x < bx ? -1 : 1;
+    for (const p of [{ x: bx + from * 42, z: 20 }, { x: bx - from * 42, z: 20 }]) {
+      const r = await walkTo(p, 5, 200, until);
+      if (!r.ok) return r;
+      if (until && await until(await G())) return { ...r, sure: r.sure + extra };
+      extra += r.sure; stuck += r.stuck;
+    }
+  }
+  const r = await walkTo(t, radius, limitS, until);
+  return { ...r, sure: r.sure + extra, stuck: r.stuck + stuck };
+}
+
 // ---- Soru: doğru şıkkı bul; bazılarını bilerek yanlış yanıtla
 const YANLIS = new Set(['B1S2', 'B2S3']);
 async function answerQuiz() {
@@ -107,7 +135,20 @@ async function answerQuiz() {
 // ---- Etkinlikler
 async function doActivity() {
   const has = (q) => page.$(q).then((h) => !!h);
-  if (await has('.plan-canvas')) {
+  if (await has('.poster-canvas')) {
+    await page.type('.poster-title', 'Dere Yatağı Ev Değildir!');
+    const msgs = await page.$$('.poster-msg');
+    for (const i of [0, 1, 2]) await msgs[i].click(); // 1. mesaj yanlış bilgi
+    await clickText('.lab-right > button', 'Afişi tamamla'); await sleep(200);
+    if (await vis('#act-next')) report.hatalar.push('Afiş: yanlış bilgili afiş kabul edildi');
+    note('Afiş (yanlış mesaj): ' + (await text('.lab-right .act-note')).slice(0, 80));
+    await msgs[1].click(); await msgs[4].click();
+    await (await page.$$('.lab-right .lab-opts button'))[1].click();
+    await clickText('.lab-right > button', 'Afişi tamamla'); await sleep(200);
+    await shot('act_afis');
+    if (!(await vis('#act-next'))) throw new Error('Afiş tamamlanamadı');
+    note('Afiş: ' + (await text('#act-feedback')).slice(0, 40));
+  } else if (await has('.plan-canvas')) {
     // Her öğe için kurala uyan en ucuz yeri sayfadaki değerlendirme işleviyle bul
     const sites = await page.evaluate(() => {
       const o = window.__oyun, P = o.PLAN, B = o.world.buildings, out = {};
@@ -248,7 +289,7 @@ async function testOverlays(tag) {
 
 // ---- Ana döngü
 const T0 = Date.now();
-let lastStep = -1, reloaded = false;
+let lastStep = -1;
 while (true) {
   let s = await G();
   if (s.mode === 'end') {
@@ -273,7 +314,7 @@ while (true) {
       await page.keyboard.press('KeyE'); await sleep(200);
       if ((await G()).mode !== 'play') report.hatalar.push('Uzakken E etkileşimi başlattı');
     }
-    const r = await walkTo(s.hedef, 4.5);
+    const r = await go(s.hedef, 4.5);
     if (!r.ok) { await shot('takildi_' + s.id); throw new Error(`Hedefe ulaşılamadı: ${s.id}, kalan ${r.kalan?.toFixed(0)} birim`); }
     await sleep(300);
     if (!(await vis('#prompt'))) report.hatalar.push(`${s.id}: hedefe varınca etkileşim kutusu görünmedi`);
@@ -282,6 +323,20 @@ while (true) {
     await handleBusy();
     report.adimlar.push({ id: s.id, yurume_sn: +r.sure.toFixed(0), takilma: r.stuck });
     if (s.step === 1 || s.step === 9 || s.step === 11) await testOverlays('adim' + s.step);
+  } else if (s.tur === 'tahliye') {
+    await shot('firtina');
+    while ((await G()).tur === 'tahliye') {
+      const g0 = await G();
+      const r = await go(g0.hedef, 5);
+      if (!r.ok) throw new Error('Tahliye hedefine ulaşılamadı');
+      await sleep(300);
+      if (!(await vis('#prompt'))) report.hatalar.push('Tahliye: uyarma kutusu görünmedi');
+      await shot('tahliye_' + Math.round(g0.hedef.x));
+      await page.keyboard.press('KeyE'); await sleep(250);
+      await handleBusy();
+      note(`Aile uyarıldı (${r.sure.toFixed(0)} sn yürüme, ${r.stuck} takılma), sayaç: ${await text('#pieces')}`);
+    }
+    report.adimlar.push({ id: s.id, sure_sn: +((Date.now() - st0) / 1000).toFixed(0) });
   } else if (s.tur === 'drone') {
     const H = await page.evaluate(() => window.__oyun.STEPS[window.__oyun.state.step].hedefler.map((h) => ({ key: h.key, x: h.x, z: h.z })));
     await page.keyboard.press('KeyF'); await sleep(400);
@@ -318,7 +373,7 @@ while (true) {
     const C = { sel: { x: 272, z: 60 }, heyelan: { x: -70, z: 70 }, guvenli: { x: 70, z: 10 } };
     for (const t of ['sel', 'heyelan', 'guvenli']) {
       const ok = (p) => page.evaluate((x, z, tt) => { const o = window.__oyun; return o.riskAt(x, z) === tt && (tt !== 'guvenli' || o.slopeAt(x, z) < 0.2); }, p.x, p.z, t);
-      const r = await walkTo(C[t], 3, 240, t === 'guvenli' ? null : (p) => ok(p));
+      const r = await go(C[t], 3, 240, t === 'guvenli' ? null : (p) => ok(p));
       if (!r.ok) throw new Error('Sensör yeri bulunamadı: ' + t);
       await sleep(200);
       await page.keyboard.press('KeyE'); await sleep(300);

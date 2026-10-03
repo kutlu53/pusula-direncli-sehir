@@ -272,3 +272,16 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 .plan-budget { font-weight: 800; font-size: 16px; margin: 8px 0 2px; color: var(--teal-d); }
 .plan-budget.over { color: var(--red); }
 @media (max-height: 480px) { .plan-row { padding: 3px 6px; margin-bottom: 3px; } .plan-name { font-size: 12.5px; } .plan-budget { margin: 4px 0 0; font-size: 14px; } }
+
+/* ---------- 6. bölüm: afiş ---------- */
+.poster-left { flex: 0 0 auto; width: min(36%, 44vh); }
+.poster-canvas { width: 100%; display: block; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+.poster-h { display: block; font-weight: 700; font-size: 13px; color: var(--teal-d); margin: 6px 0 3px; }
+.poster-title { width: 100%; padding: 7px 10px; font: inherit; font-size: 15px; border: 2px solid var(--teal); border-radius: 10px; background: #fff; user-select: text; -webkit-user-select: text; }
+.poster-msg { margin: 0 0 4px; padding: 6px 9px; font-size: 13px; font-weight: 600; text-align: left; background: var(--paper2); color: var(--ink); border: 2px solid #b9a77a; }
+.poster-msg:hover { background: #fff; }
+.poster-msg.on { background: #d8efe9; border-color: var(--teal); }
+.poster-msg.wrong { background: #f3cfc6; border-color: var(--red); }
+#stats.alarm { background: #e0452f; color: #fff; }
+@media (max-width: 600px) { .poster-left { width: 60%; margin: 0 auto; } }
+@media (max-height: 480px) { .poster-msg { padding: 3px 7px; font-size: 12px; margin-bottom: 3px; } .poster-left { width: min(30%, 60vh); } }

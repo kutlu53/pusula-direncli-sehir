@@ -4,7 +4,7 @@ import { buildWorld } from './world.js';
 import { Player } from './player.js';
 import { Drone } from './drone.js';
 import * as ui from './ui.js';
-import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN } from './story.js';
+import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS } from './story.js';
 import { Log } from './log.js';
 import { PLACES, M_PER_UNIT, riskAt, slopeAt } from './terrain.js';
 
@@ -40,11 +40,14 @@ resize();
 let mode = 'title'; // title | play | busy | map | menu | defter | end
 let state = fresh();
 function fresh() {
-  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0, plan: null };
+  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0, plan: null, uyarilan: [], kalan: null };
 }
 const step = () => STEPS[state.step];
 // Adımın hedefi: sabit yer ya da oyuncunun planında seçtiği yapı (önüne varılır)
-const hedefOf = (s) => s && (s.hedef || (s.hedefPlan && state.plan ? { x: state.plan[s.hedefPlan].x, z: state.plan[s.hedefPlan].z + 8 } : null));
+const hedefOf = (s) => s && (s.hedef
+  || (s.hedefPlan && state.plan ? { x: state.plan[s.hedefPlan].x, z: state.plan[s.hedefPlan].z + 8 } : null)
+  || (s.hedefCihaz != null && state.cihazlar[s.hedefCihaz])
+  || (s.tur === 'tahliye' && s.hedefler.find((h) => !state.uyarilan.includes(h.key))) || null);
 const planMarks = () => (state.plan ? PLAN.ogeler.map((o) => ({ ...o, ...state.plan[o.key] })) : []);
 const pieces = () => STEPS.slice(0, state.step).filter((s) => s.tur === 'parca').length;
 const note = (b, m) => state.defter.push({ b, m });
@@ -53,6 +56,12 @@ const log = (entry) => Log.add({ ogrenci: state.code, ...entry });
 function refresh() {
   const s = step(), bolum = s ? s.bolum : CHAPTERS.length;
   let gorev = s ? s.gorev : 'Görevler tamamlandı! Şehri özgürce gez.';
+  if (s && s.tur === 'tahliye') {
+    const h = hedefOf(s);
+    if (state.kalan == null) state.kalan = s.sure;
+    if (h) gorev = `Koş ve uyar: ${h.ad} (${state.uyarilan.length}/${s.hedefler.length})`;
+  }
+  world.setStorm((s && s.firtina) || 0);
   if (s && s.tur === 'sensor') {
     const c = s.cihazlar[state.cihazlar.length];
     if (c) gorev = `${c.ad}: ${c.nereye} yerleştir (${state.cihazlar.length}/${s.cihazlar.length})`;
@@ -61,7 +70,9 @@ function refresh() {
     gorev += ` (${state.fotolar.length}/${s.hedefler.length}). ` +
       (drone.active ? 'Hedefin üstüne gelince fotoğraf çek.' : `Drone'u uçur: ${isTouch ? '🛸 düğmesi' : 'F tuşu'}.`);
   }
-  ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : bolum === 3 ? `📡 ${state.cihazlar.length}/3` : bolum === 4 ? `🧪 ${state.deneyler}/2` : `🏗️ ${state.plan ? 5 : 0}/5`, puan: state.score });
+  ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : bolum === 3 ? `📡 ${state.cihazlar.length}/3` : bolum === 4 ? `🧪 ${state.deneyler}/2` : bolum === 5 ? `🏗️ ${state.plan ? 5 : 0}/5`
+      : s && s.tur === 'tahliye' ? `⏱ ${Math.max(0, Math.ceil(state.kalan))} sn` : `👪 ${state.uyarilan.length}/2`, puan: state.score });
+  $('stats').classList.toggle('alarm', !!s && s.tur === 'tahliye' && state.kalan < 40);
   world.setTarget(hedefOf(s), !!s && s.tur === 'parca');
   document.body.classList.toggle('has-drone', !!s && s.tur === 'drone');
   document.body.classList.toggle('drone', drone.active);
@@ -263,6 +274,11 @@ async function runActs(s, names) {
       state.score += Math.max(40, 100 - Math.max(0, r.trials.length - 2) * 10);
       state.deneyler++;
       note(...spec.defter);
+    } else if (name === 'afis') {
+      const r = await ui.poster(AFIS, state.code);
+      log({ olay: 'afis', soru: 'B6E1', secilen: JSON.stringify(r.mesajlar), dogru: r.deneme + '. denemede', adim: s.id, metin: r.baslik });
+      state.score += Math.max(60, 150 - (r.deneme - 1) * 30);
+      note('Afişim: ' + r.baslik, r.mesajlar.join(' '));
     } else if (name === 'plan') {
       const r = await ui.planBoard(PLAN, world.buildings);
       log({ olay: 'plan', soru: 'B5E1', secilen: JSON.stringify(Object.fromEntries(Object.entries(r.plan).map(([k, p]) => [k, [Math.round(p.x), Math.round(p.z)]]))), dogru: r.deneme + '. denemede', adim: s.id, metin: 'bütçe ' + r.butce });
@@ -305,6 +321,7 @@ async function interact() {
   if (!s) return;
   if (s.tur === 'drone') return photo(s);
   if (s.tur === 'sensor') return placeDevice(s);
+  if (s.tur === 'tahliye') return warn(s);
   const t = targetInfo();
   if (!t || t.dist > 6) return;
   mode = 'busy'; unlock(); ui.setPrompt('');
@@ -330,6 +347,31 @@ async function photo(s) {
     return;
   }
   drone.stop(); refresh();
+  await finishStep(s);
+}
+
+// 6. bölüm: süre dolmadan riskli yerlerdeki aileleri uyar
+async function warn(s) {
+  const t = targetInfo();
+  if (!t || t.dist > 7) return;
+  const h = hedefOf(s);
+  mode = 'busy'; unlock(); ui.setPrompt('');
+  await ui.dialog(h.once);
+  await ask(s, h.soru);
+  state.uyarilan.push(h.key);
+  state.score += 60 + Math.round(Math.max(0, state.kalan) / 3);
+  save(); refresh();
+  if (state.uyarilan.length < s.hedefler.length) { ui.toast(`${h.ad} yola çıktı. Sıradaki: ${hedefOf(s).ad}!`); mode = 'play'; return; }
+  state.kalan = null;
+  await finishStep(s);
+}
+async function timeUp(s) {
+  mode = 'busy'; unlock(); ui.setPrompt('');
+  const kalanlar = s.hedefler.filter((h) => !state.uyarilan.includes(h.key));
+  log({ olay: 'sure_doldu', adim: s.id, secilen: kalanlar.map((h) => h.key).join(',') });
+  kalanlar.forEach((h) => state.uyarilan.push(h.key));
+  state.kalan = null;
+  await ui.dialog([['Elif Abla (telsiz)', 'Süre doldu, kâşif! Merak etme: 112 ekipleri yetişti ve kalan aileleri onlar uyardı. Erken haber vermenin önemi işte bu.']]);
   await finishStep(s);
 }
 
@@ -377,7 +419,7 @@ if (Log.load()) $('continue').classList.remove('hidden');
 
 // Otomatik oynanış testi için durum erişimi (?test=1)
 if (qp.has('test')) {
-  window.__oyun = { player, drone, world, STEPS, ISARET, FARKLAR, KATMAN_YERLER, PLAN, riskAt, slopeAt, hedef: () => hedefOf(step()),
+  window.__oyun = { player, drone, world, STEPS, ISARET, FARKLAR, KATMAN_YERLER, PLAN, riskAt, slopeAt, hedef: () => hedefOf(step()), basla: (kayit) => begin(kayit),
     get state() { return state; }, get mode() { return mode; } };
 }
 
@@ -421,12 +463,12 @@ renderer.setAnimationLoop(() => {
     titleAngle += dt * 0.05;
     camera.position.set(40 + Math.sin(titleAngle) * 300, 95, -40 - Math.cos(titleAngle) * 300);
     camera.lookAt(-30, 20, 40);
-    world.update(dt, t, origin);
+    world.update(dt, t, origin, false, camera.position);
   } else {
     const playing = mode === 'play';
     player.update(dt, keys, playing && !drone.active);
     if (drone.active) drone.update(dt, playing ? keys : {});
-    world.update(dt, t, drone.active ? drone.focus : player.pos, drone.active);
+    world.update(dt, t, drone.active ? drone.focus : player.pos, drone.active, camera.position);
     ui.updateCompass(player.headingDeg);
     const ti = targetInfo();
     world.showMarker(!!ti && (ti.s.tur !== 'parca' || ti.dist < 120));
@@ -435,9 +477,16 @@ renderer.setAnimationLoop(() => {
       const key = isTouch ? '' : 'E — ';
       let prompt = '';
       const st = step();
+      if (st && st.tur === 'tahliye' && state.kalan != null) {
+        const once = Math.ceil(state.kalan);
+        state.kalan -= dt;
+        if (Math.ceil(state.kalan) !== once) refresh();
+        if (state.kalan <= 0) timeUp(st);
+      }
       const cihaz = st && st.tur === 'sensor' && st.cihazlar[state.cihazlar.length];
       if (cihaz) prompt = key + '📡 ' + cihaz.ad + ' yerleştir';
       else if (drone.active) prompt = droneTarget() ? key + '📷 Fotoğraf çek' : '';
+      else if (ti && ti.s.tur === 'tahliye') prompt = ti.dist < 7 ? key + '📣 Aileleri uyar' : '';
       else if (ti && ti.dist < 6) prompt = key + (ti.s.tur === 'npc' ? 'Konuş' : ti.s.etiket || 'Harita parçasını al');
       ui.setPrompt(prompt);
       if ((saveTimer += dt) > 10) { saveTimer = 0; save(); }

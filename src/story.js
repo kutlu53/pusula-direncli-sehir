@@ -13,8 +13,9 @@ export const CHAPTERS = [
   { no: 3, ad: 'Katmanlar', rozet: 'Katman Ustası', simge: '🗂️' },
   { no: 4, ad: 'Yerin Altı, Göğün Üstü', rozet: 'Deney Ustası', simge: '🧪' },
   { no: 5, ad: 'Yeniden Kur', rozet: 'Şehir Plancısı', simge: '🏗️' },
+  { no: 6, ad: 'Büyük Sınav', rozet: 'Afet Gönüllüsü', simge: '🚨' },
 ];
-export const NEXT_CHAPTER = '6. Bölüm: Büyük Sınav — yakında';
+export const NEXT_CHAPTER = '7. Bölüm: Yardım Rotası (Ordu\'nun ilçeleri) — yakında';
 
 // Adım türleri: npc / parca / nesne (hedefe yürü, E ile etkileşim) ve drone (havadan hedefleri fotoğrafla).
 // Sıra: once diyaloğu → onEtkinlik → soru → sonra diyaloğu → etkinlikler → kapanis diyaloğu.
@@ -323,7 +324,118 @@ export const STEPS = [
     ],
     bolumSonu: 5,
   },
+
+  // ---------------- 6. BÖLÜM: BÜYÜK SINAV ----------------
+  {
+    id: 'alarm', bolum: 6, tur: 'nesne', hedefCihaz: 0, etiket: 'Sensörü oku', firtina: 0.6,
+    gorev: 'Şiddetli yağış başladı! Su seviyesi sensörün alarm veriyor; yanına koş (haritada mavi kare)',
+    once: [
+      ['Sen', 'Sensör kırmızı yanıyor: su seviyesi kritik çizgiyi geçmiş ve hâlâ yükseliyor!'],
+      ['Elif Abla (telsiz)', 'Sensörün sayesinde taşkından ÖNCE haberimiz oldu, kâşif. Şimdi karar senin!'],
+    ],
+    soru: {
+      id: 'B6S1', beceri: 'Afet anında karar (erken uyarı)',
+      metin: 'Su seviyesi kritik çizgiyi geçti ve yükseliyor. İlk yapılması gereken nedir?',
+      secenekler: [
+        'Suyun kendiliğinden durmasını beklemek',
+        'Yetkililere haber verip riskli yerdeki aileleri uyarmak',
+        'Irmak kenarına inip suya yakından bakmak',
+        'Eve gidip yağmurun dinmesini beklemek',
+      ], dogru: 1,
+      aciklama: 'Erken uyarı zaman kazandırır; bu zaman insanları riskli yerden çıkarmak için kullanılır. Afet ve acil durumlarda 112 Acil Çağrı Merkezi aranır.',
+    },
+    sonra: [
+      ['Elif Abla (telsiz)', '112\'ye haber verildi, ekipler yolda. Ama onlar gelene kadar aileleri uyarmak bize düşüyor. Süren kısıtlı!'],
+      ['Elif Abla (telsiz)', 'Önce ırmak kenarındaki evlere koş; su en önce orayı basar. Sonra Boztepe yamacındaki evlere git.'],
+    ],
+  },
+  {
+    id: 'tahliye', bolum: 6, tur: 'tahliye', firtina: 0.85, sure: 200,
+    gorev: 'Riskli yerlerdeki aileleri uyar',
+    hedefler: [
+      {
+        key: 'taskin', x: RISKS.taskin.x - 32, z: RISKS.taskin.z, ad: 'ırmak kenarındaki aileler',
+        once: [['Irmak kenarındaki aile', 'Su bahçeye kadar geldi! Dur, önce televizyonu ve halıları arabaya yükleyelim...']],
+        soru: {
+          id: 'B6S2', beceri: 'Afet anında karar (sel)',
+          metin: 'Aile eşyalarını kurtarmak istiyor. Onlara ne söylemelisin?',
+          secenekler: [
+            'Haklısınız, ben de taşımaya yardım edeyim.',
+            'Arabayla suyun içinden hızlıca geçin.',
+            'Eşya yerine konur, can konmaz. Yalnızca afet çantanızı alın ve hemen toplanma alanına gidin.',
+            'Çatıya çıkıp suyun çekilmesini bekleyin.',
+          ], dogru: 2,
+          aciklama: 'Sel çok hızlı yükselir; eşya için kaybedilen her dakika canı tehlikeye atar. Önceden hazırlanan afet çantası bu yüzden önemlidir. Sel suyunun içinden yürümek ya da araçla geçmek de tehlikelidir.',
+        },
+      },
+      {
+        key: 'yamac', x: PLACES.kemal.x, z: PLACES.kemal.z, ad: 'yamaçtaki aileler',
+        once: [['Yamaçtaki aile', 'Yağmur dinene kadar bodruma inelim, orası sağlamdır. Hem bahçe duvarı az önce çatladı, ona da bakmam lazım.']],
+        soru: {
+          id: 'B6S3', beceri: 'Afet anında karar (heyelan)',
+          metin: 'Bahçe duvarı yeni çatlamış ve aile bodruma inmek istiyor. Ne söylemelisin?',
+          secenekler: [
+            'Çatlak heyelanın habercisi olabilir. Evi hemen boşaltın, yamaçtan uzaklaşıp toplanma alanına gidin.',
+            'Bodrum iyi fikir, orada bekleyin.',
+            'Duvarı hemen onarmaya başlayın.',
+            'Yamacın hemen altındaki yola inip orada bekleyin.',
+          ], dogru: 0,
+          aciklama: 'Yeni çatlaklar, eğilen ağaçlar ve direkler heyelanın habercisi olabilir. Heyelanda bodrum ya da yamacın altı güvenli değildir; yamaçtan uzaklaşmak gerekir.',
+        },
+      },
+    ],
+    sonra: [
+      ['Elif Abla (telsiz)', 'Aileler yola çıktı! Şimdi toplanma alanına gel; herkes geldi mi, birlikte sayacağız.'],
+    ],
+  },
+  {
+    id: 'toplanma', bolum: 6, tur: 'nesne', hedefCihaz: 2, etiket: 'Yoklama al', firtina: 1,
+    gorev: 'Toplanma alanına git ve yoklama al (haritada yeşil kare)',
+    once: [
+      ['Elif Abla (telsiz)', 'Yoklama tamam: ırmak kenarından ve yamaçtan gelen bütün aileler toplanma alanında. Herkes güvende!'],
+      ['Kemal Bey (telsiz)', 'Irmak taştı ama taşkın parkı suyu tuttu. Yeni okul ve hastane kupkuru. İyi ki o yamaca yeni ev yapmamışım...'],
+      ['Hasan Usta (telsiz)', 'Sensörün haber verdi, haritan yol gösterdi, planın korudu. Bir şehri dirençli yapan işte budur.'],
+    ],
+    soru: {
+      id: 'B6S4', beceri: 'Afet sonrası karar',
+      metin: 'Yağmur durdu. Aileler hemen evlerine dönmek istiyor. Doğrusu nedir?',
+      secenekler: [
+        'Hemen dönebilirler; yağmur durdu.',
+        'Yalnızca çocuklar dönebilir.',
+        'Önce en yaşlılar gidip baksın.',
+        'Yetkililer güvenli olduğunu açıklayana kadar dönülmez.',
+      ], dogru: 3,
+      aciklama: 'Yağmur dursa da su çekilmemiş, yamaç hâlâ ıslak ve binalar zarar görmüş olabilir. AFAD ve yetkililer kontrol edip güvenli diyene kadar riskli yere dönülmez.',
+    },
+    sonra: [
+      ['Elif Abla (telsiz)', 'Son bir iş kaldı, belki de en önemlisi: bildiklerini başkalarına da öğretmek. Şehir için bir afet farkındalık afişi hazırlar mısın?'],
+    ],
+    etkinlikler: ['afis'],
+    kapanis: [
+      ['Elif Abla (telsiz)', 'Afişin harika! Onu okuluna ve mahallene asabilirsin. Bugünden sonra sen de bir afet gönüllüsüsün.'],
+      ['Hasan Usta (telsiz)', 'Altınordu artık hazır. Ama Ordu\'nun on dokuz ilçesi var, kâşif: Ünye, Fatsa, Gölköy, Aybastı... Onların da bir haritacıya ihtiyacı var.'],
+    ],
+    bolumSonu: 6,
+  },
 ];
+
+// ---------------- 6. bölüm: afet farkındalık afişi ----------------
+export const AFIS = {
+  varsayilanBaslik: 'Sel ve Heyelana Hazır Ol!',
+  kacMesaj: 3,
+  mesajlar: [
+    { m: 'Afet çantanı hazırla; kapının yanında dursun.', ok: true },
+    { m: 'Sel sırasında bodruma in; orası en güvenli yerdir.', ok: false, neden: 'Sel suyu en önce bodrumu doldurur; yukarıya ve güvenli alana çıkılır.' },
+    { m: 'Ailenle buluşma yerini ve toplanma alanını önceden belirle.', ok: true },
+    { m: 'Yağmur dinince hemen evine dön.', ok: false, neden: 'Yetkililer güvenli diyene kadar riskli yere dönülmez.' },
+    { m: 'Dere yatağına ve dik yamaca ev yapılmasın; ağaçları koru.', ok: true },
+    { m: 'Sel suyunun içinden arabayla hızlıca geç.', ok: false, neden: 'Akan su aracı sürükler; sel suyuna araçla da yaya da girilmez.' },
+    { m: 'Şiddetli yağışta dere kenarından ve köprülerden uzak dur.', ok: true },
+  ],
+  renkler: [['#12807f', 'Turkuaz'], ['#d0542b', 'Turuncu'], ['#2f5fb0', 'Mavi']],
+};
+
+// ---------------- 5. bölüm: planlama masası ----------------
 
 // ---------------- 5. bölüm: planlama masası ----------------
 const MERKEZ = { x: 60, z: coastZ(60) + 70 };
