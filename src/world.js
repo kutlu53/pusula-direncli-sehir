@@ -445,7 +445,7 @@ export function buildWorld({ lowGfx = false } = {}) {
     { ...PLACES.tasbasi, r: 26 }, { ...PLACES.teleferik, r: 13 }, { ...PLACES.start, r: 24 },
     { ...PLACES.findik, r: 34 }, { ...BOZTEPE, r: 22 }, { x: PLACES.kopru.x - 38, z: BRIDGE_Z, r: 14 },
     { x: PLACES.kopru.x + 38, z: BRIDGE_Z, r: 14 },
-    { ...RISKS.taskin, r: 46 }, { ...RISKS.yamac, r: 26 }, { ...RISKS.orman, r: 40 },
+    { ...RISKS.taskin, r: 46 }, { ...RISKS.yamac, r: 26 }, { ...RISKS.orman, r: 40 }, { ...PLACES.afad, r: 16 }, { ...PLACES.kemal, r: 15 },
   ];
   const buildings = buildCity(scene, colliders, avoid);
   buildRiskHouses(scene, colliders, buildings);
@@ -461,6 +461,20 @@ export function buildWorld({ lowGfx = false } = {}) {
   usta.position.set(PLACES.iskele.x, PIER.y, PLACES.iskele.z);
   usta.rotation.y = Math.PI; // güneye, kıyıya bakar
   scene.add(usta);
+
+  // 4. bölüm karakterleri: AFAD gönüllüsü Elif (çadırıyla) ve müteahhit Kemal Bey
+  const A = PLACES.afad, ay = terrainHeight(A.x, A.z);
+  const tent = shadowed(new THREE.Mesh(new THREE.ConeGeometry(4.2, 3.6, 4).rotateY(Math.PI / 4), std(0xe8741c)));
+  tent.position.set(A.x - 6, ay + 1.8, A.z + 3);
+  scene.add(tent, box(2.2, 1, 1.2, std(0xf4f1ea), A.x + 2.6, ay + 0.5, A.z + 1));
+  const elif = makeCharacter({ shirt: 0xe8741c, pants: 0x2d3a55, hair: 0x2a1a12 });
+  elif.position.set(A.x, ay, A.z);
+  elif.rotation.y = Math.PI * 0.75;
+  const K = PLACES.kemal;
+  const kemal = makeCharacter({ shirt: 0x4a5568, pants: 0x2b2f38, hair: 0xf2c230 });
+  kemal.position.set(K.x, terrainHeight(K.x, K.z), K.z);
+  kemal.rotation.y = -Math.PI / 2;
+  scene.add(elif, kemal);
 
   // Hedef işareti: harita parçası + ışık sütunu
   const marker = new THREE.Group();

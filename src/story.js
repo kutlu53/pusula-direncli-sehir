@@ -11,8 +11,9 @@ export const CHAPTERS = [
   { no: 1, ad: 'Kayıp Harita', rozet: 'Harita Çırağı', simge: '🧭' },
   { no: 2, ad: 'Gökten Bakış', rozet: 'Gök Gözcüsü', simge: '🛸' },
   { no: 3, ad: 'Katmanlar', rozet: 'Katman Ustası', simge: '🗂️' },
+  { no: 4, ad: 'Yerin Altı, Göğün Üstü', rozet: 'Deney Ustası', simge: '🧪' },
 ];
-export const NEXT_CHAPTER = '4. Bölüm: Yerin Altı, Göğün Üstü — yakında';
+export const NEXT_CHAPTER = '5. Bölüm: Yeniden Kur — yakında';
 
 // Adım türleri: npc / parca / nesne (hedefe yürü, E ile etkileşim) ve drone (havadan hedefleri fotoğrafla).
 // Sıra: once diyaloğu → onEtkinlik → soru → sonra diyaloğu → etkinlikler → kapanis diyaloğu.
@@ -220,7 +221,111 @@ export const STEPS = [
     ],
     bolumSonu: 3,
   },
+
+  // ---------------- 4. BÖLÜM: YERİN ALTI, GÖĞÜN ÜSTÜ ----------------
+  {
+    id: 'afad', bolum: 4, hedef: PLACES.afad, tur: 'npc',
+    gorev: 'Melet Köprüsü\'nün batı ucundaki turuncu AFAD çadırına git',
+    once: [
+      ['Elif Abla', 'Merhaba kâşif! Ben Elif, AFAD gönüllüsüyüm. AFAD, yani Afet ve Acil Durum Yönetimi Başkanlığı; afetlere hazırlık yapar, afet olunca yardıma koşar.'],
+      ['Elif Abla', 'Hasan Usta senden çok söz etti. Risk haritan işimize yarayacak. Ama insanlara riski anlatmak için NEDEN olduğunu da bilmelisin.'],
+      ['Elif Abla', 'Bu deney setinde yağışı ve yamacın örtüsünü değiştirip ırmağa ne olduğunu görebilirsin. İki görevin var; listeye bak ve dene!'],
+    ],
+    onEtkinlik: ['deney-sel'],
+    soru: {
+      id: 'B4S1', beceri: 'Neden-sonuç (sel)',
+      metin: 'Deneyde, aynı şiddetli yağmurda ırmağın taşmasını ne önledi?',
+      secenekler: [
+        'Yamacın betonla kaplanması',
+        'Ormanın suyu tutup toprağa sızdırması',
+        'Irmağın kenarına ev yapılması',
+        'Yamaçtaki ağaçların kesilmesi',
+      ], dogru: 1,
+      aciklama: 'Orman yağmuru yapraklarıyla ve toprağıyla tutar, suyun büyük kısmı toprağa sızar. Çıplak ya da betonla kaplı yüzeyde su sızamaz, hızla ırmağa akar ve ırmak taşar.',
+    },
+    sonra: [
+      ['Elif Abla', 'Harika gözlem! Sel yalnızca "çok yağmur" demek değil; suyun gidecek yer bulamaması demek.'],
+      ['Elif Abla', 'Deney setinin ikinci kutusunu al. Boztepe yamacındaki evlerin orada Kemal Bey var; yeni evler yapmak istiyor. Onunla konuşman gerek.'],
+    ],
+  },
+  {
+    id: 'kemal', bolum: 4, hedef: PLACES.kemal, tur: 'npc',
+    gorev: 'Boztepe\'nin doğu yamacındaki evlerin yanında Kemal Bey\'i bul',
+    once: [
+      ['Kemal Bey', 'Sen de kimsin evlat? Ben Kemal, müteahhidim. Bu yamaçtaki evleri ben yaptım; şimdi yanlarına altı ev daha yapacağım.'],
+      ['Sen', 'Ama Kemal Bey, burası risk haritasında kıpkırmızı. Heyelan riski var!'],
+      ['Kemal Bey', 'Heyelan mı? Otuz yıldır buradayım, bu yamaç yerinden kıpırdamadı. Toprak durduk yere neden kaysın?'],
+      ['Sen', 'Elif Abla\'nın deney setini getirdim. Gelin birlikte deneyelim; kendi gözünüzle görün.'],
+    ],
+    onEtkinlik: ['deney-heyelan'],
+    soru: {
+      id: 'B4S2', beceri: 'Kanıta dayalı ikna',
+      metin: 'Kemal Bey hâlâ kararsız. Onu ikna etmek için en güçlü söz hangisi?',
+      secenekler: [
+        'Herkes burasının tehlikeli olduğunu söylüyor.',
+        'Bence bu evler hiç güzel görünmüyor.',
+        'Deneyde gördük: ağaçlar kesilip toprak ıslanınca dik yamaç kayıyor. Burası dik, ağaçsız ve yağış bol.',
+        'Hasan Usta sizin evlerinizi sevmiyor.',
+      ], dogru: 2,
+      aciklama: 'İnsanları ikna etmenin en sağlam yolu kanıt göstermektir. "Herkes öyle diyor" ya da "bence" yerine deneyin sonucunu ve buranın özelliklerini söylemek gerekir.',
+    },
+    sonra: [
+      ['Kemal Bey', 'Hımm... Kendi gözümle gördüm. Keşke o ağaçları kesmeseydim. Yeni evleri buraya yapmayacağım.'],
+      ['Kemal Bey', 'Ama insanların eve ihtiyacı var, kâşif. Buraya olmazsa nereye yapacağız? Onu da bana sen göstereceksin!'],
+    ],
+    etkinlikler: ['ozet4'],
+    kapanis: [
+      ['Hasan Usta (telsiz)', 'Kemal Bey\'i sözle değil, kanıtla ikna ettin. Farkındalık böyle başlar: önce anla, sonra göster.'],
+      ['Hasan Usta (telsiz)', 'Kemal Bey haklı bir soru sordu: Evler nereye yapılmalı? Sıradaki görevde şehri birlikte yeniden planlayacağız.'],
+    ],
+    bolumSonu: 4,
+  },
 ];
+
+// 4. bölüm deneyleri: değişkenleri seç, dene, hedefleri tamamla
+export const LABS = {
+  'deney-sel': {
+    kod: 'B4E1', cizim: 'sel', baslik: 'Yağmur deneyi: Irmak ne zaman taşar?',
+    giris: 'Yağışı ve yamacın örtüsünü seç, sonra deneyi başlat. Aşağıdaki iki görevi tamamla.',
+    degiskenler: [
+      { key: 'yagis', ad: 'Yağış', secenekler: [['az', 'Az'], ['orta', 'Orta'], ['siddetli', 'Şiddetli']] },
+      { key: 'ortu', ad: 'Yamaç', secenekler: [['orman', 'Ormanlık'], ['ciplak', 'Çıplak toprak'], ['beton', 'Beton ve asfalt']] },
+    ],
+    // akış = yağış × yüzeyden akan pay
+    sim: (v) => {
+      const akis = { az: 1, orta: 2, siddetli: 3 }[v.yagis] * { orman: 0.45, ciplak: 0.8, beton: 1 }[v.ortu];
+      return { kotu: akis >= 2.2, seviye: akis / 2.2, sonuc: akis >= 2.2 ? 'Irmak taştı! Ev su altında.' : akis >= 1.5 ? 'Irmak yükseldi ama taşmadı.' : 'Irmak sakin, taşmadı.' };
+    },
+    hedefler: [
+      { metin: 'Irmağı taşıran bir durum bul', test: (d) => d.some((t) => t.kotu) },
+      { metin: 'Şiddetli yağışta ırmağın taşmadığı bir durum bul', test: (d) => d.some((t) => !t.kotu && t.v.yagis === 'siddetli') },
+    ],
+    bitis: 'İki görevi de tamamladın. Aynı yağmur, yüzeye göre çok farklı sonuç veriyor: su toprağa sızamazsa ırmağa koşar.',
+    defter: ['Sel nasıl oluşur?', 'Şiddetli yağışta su toprağa sızamazsa yüzeyden hızla ırmağa akar ve ırmak taşar. Orman suyu tutar; çıplak toprak ve beton tutmaz.'],
+  },
+  'deney-heyelan': {
+    kod: 'B4E2', cizim: 'heyelan', baslik: 'Yamaç deneyi: Toprak ne zaman kayar?',
+    giris: 'Eğimi, bitki örtüsünü ve toprağın ıslaklığını seç, sonra deneyi başlat. İki görevi tamamla.',
+    degiskenler: [
+      { key: 'egim', ad: 'Eğim', secenekler: [['az', 'Az'], ['orta', 'Orta'], ['dik', 'Dik']] },
+      { key: 'ortu', ad: 'Bitki örtüsü', secenekler: [['agacli', 'Ağaçlı'], ['agacsiz', 'Ağaçsız']] },
+      { key: 'su', ad: 'Toprak', secenekler: [['kuru', 'Kuru'], ['islak', 'Yağıştan ıslak']] },
+    ],
+    // kayma eğilimi = eğim + ıslaklık − köklerin tutuşu
+    sim: (v) => {
+      const p = { az: 1, orta: 2, dik: 3 }[v.egim] + (v.su === 'islak' ? 1.5 : 0) - (v.ortu === 'agacli' ? 1.5 : 0);
+      return { kotu: p >= 3, seviye: p / 3, sonuc: p >= 3 ? 'Heyelan! Toprak ve ev aşağı kaydı.' : p >= 2 ? 'Yamaç zorlandı ama yerinde kaldı.' : 'Yamaç sağlam, toprak yerinde.' };
+    },
+    hedefler: [
+      { metin: 'Heyelan oluşturan bir durum bul', test: (d) => d.some((t) => t.kotu) },
+      { metin: 'Orta ya da dik eğimde, toprak ıslakken heyelan OLMAYAN bir durum bul', test: (d) => d.some((t) => !t.kotu && t.v.egim !== 'az' && t.v.su === 'islak') },
+    ],
+    bitis: 'İki görevi de tamamladın. Eğim, su ve ağaç kökleri birlikte belirliyor: kökler toprağı tutar, su toprağı ağırlaştırıp kayganlaştırır.',
+    defter: ['Heyelan nasıl oluşur?', 'Dik yamaçta toprak yağışla ıslanıp ağırlaşır. Ağaç kökleri toprağı tutar; ağaçlar kesilirse ıslak toprak aşağı kayar. Buna heyelan denir.'],
+  },
+};
+
+// 3. bölüm katman masasındaki yerler; "dogru" değeri arazi modelindeki risk sınıfıyla aynıdır
 
 // 3. bölüm katman masasındaki yerler; "dogru" değeri arazi modelindeki risk sınıfıyla aynıdır
 export const KATMAN_YERLER = [
@@ -281,6 +386,18 @@ CLOZE.ozet3 = {
     ' riski yüksektir. Toplanma alanı ', { sec: ['dik yamaçtaki', 'ırmak kenarındaki', 'düşük riskli'], dogru: 'düşük riskli' }, ' bir yere kurulur.',
   ],
   serbest: 'Kendi mahallende ya da okulunun çevresinde riskli olabilecek bir yer var mı? Neden öyle düşünüyorsun?',
+};
+
+CLOZE.ozet4 = {
+  baslik: 'Deneylerden öğrendiklerini özetle',
+  defter: 'Deney özetim',
+  parcalar: [
+    'Şiddetli yağmurda su toprağa sızamazsa yüzeyden ', { sec: ['buharlaşır', 'akar'], dogru: 'akar' }, ' ve ırmak ',
+    { sec: ['taşar', 'kurur'], dogru: 'taşar' }, '. Ormanlar suyu tutarak ', { sec: ['deprem', 'sel'], dogru: 'sel' },
+    ' riskini azaltır. Dik, ıslak ve ağaçsız yamaçlarda toprak ', { sec: ['sertleşir', 'kayar'], dogru: 'kayar' }, '; buna ',
+    { sec: ['çığ', 'heyelan', 'kuraklık'], dogru: 'heyelan' }, ' denir.',
+  ],
+  serbest: 'Yamaca ev yapmak isteyen birine bir cümleyle ne söylerdin?',
 };
 
 export const FARKLAR = [

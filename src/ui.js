@@ -512,6 +512,142 @@ export function layerTable(yerler, buildings) {
   });
 }
 
+// 6) Deney: değişkenleri seç, canlandırmayı izle, hedefleri tamamla
+const LW = 560, LH = 290;
+function rain(g, n, t, color = 'rgba(190,215,240,.85)') {
+  g.strokeStyle = color; g.lineWidth = 1.5; g.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = (i * 97.3) % LW, y = ((i * 53.7 + t * 900) % (LH - 40));
+    g.moveTo(x, y); g.lineTo(x - 3, y + 11);
+  }
+  g.stroke();
+}
+function tree(g, x, y, s = 1) {
+  g.fillStyle = '#6b4a2e'; g.fillRect(x - 2 * s, y - 12 * s, 4 * s, 12 * s);
+  g.fillStyle = '#2f7d3c'; g.beginPath(); g.moveTo(x, y - 40 * s); g.lineTo(x + 13 * s, y - 10 * s); g.lineTo(x - 13 * s, y - 10 * s); g.fill();
+}
+function house(g, x, y, wall = '#f0d9c4') {
+  g.fillStyle = wall; g.fillRect(x - 14, y - 20, 28, 20);
+  g.fillStyle = '#b5523a'; g.beginPath(); g.moveTo(x - 18, y - 20); g.lineTo(x, y - 34); g.lineTo(x + 18, y - 20); g.fill();
+  g.fillStyle = '#4a6278'; g.fillRect(x - 4, y - 13, 8, 8);
+}
+const LABDRAW = {
+  // Yandan kesit: solda yamaç, ortada ırmak yatağı, sağda taşkın yatağındaki ev
+  sel(g, v, res, t) {
+    const n = { az: 25, orta: 60, siddetli: 130 }[v.yagis], bank = LH - 78, bed = LH - 30, cx0 = 320, cx1 = 420;
+    const sky = g.createLinearGradient(0, 0, 0, LH); sky.addColorStop(0, v.yagis === 'siddetli' ? '#6f7f8f' : '#9fb8cc'); sky.addColorStop(1, '#dfe8ee');
+    g.fillStyle = sky; g.fillRect(0, 0, LW, LH);
+    g.fillStyle = v.ortu === 'beton' ? '#9a9a9a' : v.ortu === 'ciplak' ? '#a8845a' : '#6fa34d';
+    g.beginPath(); g.moveTo(0, 70); g.lineTo(cx0, bank); g.lineTo(cx0 + 22, bed); g.lineTo(cx1 - 22, bed); g.lineTo(cx1, bank); g.lineTo(LW, bank); g.lineTo(LW, LH); g.lineTo(0, LH); g.fill();
+    g.fillStyle = '#7a5c3c'; g.fillRect(0, LH - 14, LW, 14);
+    const slopeY = (x) => 70 + (bank - 70) * (x / cx0);
+    if (v.ortu === 'orman') for (let x = 20; x < cx0 - 20; x += 34) tree(g, x, slopeY(x) + 2);
+    if (v.ortu === 'beton') for (let x = 40; x < cx0 - 40; x += 70) house(g, x, slopeY(x) + 4, '#d9e3ea');
+    const level = Math.min(res.seviye, 1.25) * (bed - bank) * Math.min(1, t * 1.4);
+    g.fillStyle = 'rgba(40,110,200,.85)';
+    g.fillRect(cx0 + 8, bed - Math.min(level, bed - bank), cx1 - cx0 - 16, Math.min(level, bed - bank));
+    if (level > bed - bank) g.fillRect(cx0 - 30, bank - (level - (bed - bank)), LW - cx0 + 30, level - (bed - bank));
+    house(g, 490, bank);
+    if (level > bed - bank) { g.fillStyle = 'rgba(40,110,200,.6)'; g.fillRect(cx1, bank - (level - (bed - bank)), LW - cx1, level - (bed - bank)); }
+    if (t > 0 && t < 1) {
+      rain(g, n, t);
+      const w = { orman: 2, ciplak: 5, beton: 7 }[v.ortu] * { az: 0.5, orta: 0.8, siddetli: 1.2 }[v.yagis];
+      g.strokeStyle = 'rgba(40,110,200,.8)'; g.lineWidth = w; g.beginPath();
+      const head = Math.min(cx0, t * 2 * cx0);
+      g.moveTo(Math.max(0, head - 200), slopeY(Math.max(0, head - 200)) - 3); g.lineTo(head, slopeY(head) - 3); g.stroke();
+      if (v.ortu !== 'beton') { // toprağa sızan su
+        g.strokeStyle = 'rgba(40,110,200,.55)'; g.lineWidth = 2;
+        for (let x = 30; x < cx0 - 20; x += v.ortu === 'orman' ? 26 : 70) { const y = slopeY(x) + 6 + ((t * 60) % 18); g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 9); g.stroke(); }
+      }
+    }
+    g.fillStyle = '#17313a'; g.font = 'bold 12px Segoe UI, sans-serif'; g.textAlign = 'center';
+    g.fillText('IRMAK', (cx0 + cx1) / 2, LH - 18); g.fillText('TAŞKIN YATAĞI', 495, LH - 18);
+  },
+  // Yandan kesit: eğimi ayarlanan yamaç, üstünde toprak örtüsü, ağaçlar ve ev
+  heyelan(g, v, res, t) {
+    const ang = { az: 0.2, orta: 0.4, dik: 0.6 }[v.egim], wet = v.su === 'islak';
+    g.fillStyle = wet ? '#8fa2b3' : '#bcd6ea'; g.fillRect(0, 0, LW, LH);
+    const x0 = 90, y0 = LH - 40, L = 380, x1 = x0 + L * Math.cos(ang), y1 = y0 - L * Math.sin(ang);
+    g.fillStyle = '#8d877a'; g.beginPath(); g.moveTo(0, y0); g.lineTo(x0, y0); g.lineTo(x1, y1); g.lineTo(LW, y1); g.lineTo(LW, LH); g.lineTo(0, LH); g.fill();
+    const slide = res.kotu ? Math.max(0, (t - 0.45) / 0.55) : 0, d = slide * slide * 120;
+    g.save();
+    g.translate(x0, y0); g.rotate(-ang);
+    if (res.kotu && t >= 1) { // kayma izi
+      g.fillStyle = '#6b5a44'; g.fillRect(40, -4, L - 80, 4);
+    }
+    g.translate(-d, 0);
+    g.fillStyle = wet ? '#6e5236' : '#a8845a'; g.fillRect(40, -16, L - 80, 16);
+    g.fillStyle = v.ortu === 'agacli' ? '#6fa34d' : wet ? '#7d6a48' : '#b79a6a'; g.fillRect(40, -20, L - 80, 5);
+    if (v.ortu === 'agacli') for (let x = 70; x < L - 60; x += 46) {
+      if (Math.abs(x - 210) < 30) continue;
+      g.save(); g.translate(x, -18); g.rotate(ang + slide * 0.5); tree(g, 0, 0);
+      g.strokeStyle = '#6b4a2e'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, 0); g.lineTo(-7, 20); g.moveTo(0, 0); g.lineTo(6, 22); g.moveTo(0, 0); g.lineTo(0, 24); g.stroke();
+      g.restore();
+    }
+    g.save(); g.translate(210, -19); g.rotate(ang + slide * 0.9); house(g, 0, 0); g.restore();
+    g.restore();
+    if (wet && t > 0 && t < 1) rain(g, 90, t, 'rgba(70,110,160,.8)');
+    if (!res.kotu && res.seviye >= 0.66 && t > 0.4 && t < 1) { // zorlanma: çatlak
+      g.strokeStyle = '#3a2c1c'; g.lineWidth = 2; g.beginPath(); g.moveTo(x1 - 70, y1 + 28); g.lineTo(x1 - 62, y1 + 40); g.lineTo(x1 - 68, y1 + 50); g.stroke();
+    }
+    g.fillStyle = '#17313a'; g.font = 'bold 12px Segoe UI, sans-serif'; g.textAlign = 'left';
+    g.fillText('ANA KAYA', 16, LH - 12); g.fillText(wet ? 'TOPRAK: ISLAK' : 'TOPRAK: KURU', 14, 20);
+  },
+};
+
+export function lab(spec) {
+  return new Promise((resolve) => {
+    const body = actOpen(spec.baslik, spec.giris);
+    const wrap = el('div', 'lab-wrap'), left = el('div', 'lab-left'), right = el('div', 'lab-right');
+    const cv = el('canvas', 'lab-canvas'); cv.width = LW; cv.height = LH;
+    const out = el('p', 'lab-out', 'Değişkenleri seç ve deneyi başlat.');
+    const g = cv.getContext('2d'), v = {}, trials = [];
+    let running = false;
+    const draw = (res, t) => LABDRAW[spec.cizim](g, v, res, t);
+    for (const d of spec.degiskenler) {
+      const row = el('div', 'lab-var');
+      row.appendChild(el('span', '', d.ad));
+      const opts = el('div', 'lab-opts');
+      d.secenekler.forEach(([val, ad], i) => {
+        const b = el('button', i ? '' : 'on', ad);
+        if (!i) v[d.key] = val;
+        b.onclick = () => {
+          if (running) return;
+          v[d.key] = val;
+          [...opts.children].forEach((c) => c.classList.toggle('on', c === b));
+          draw(spec.sim(v), 0);
+        };
+        opts.appendChild(b);
+      });
+      row.appendChild(opts); right.appendChild(row);
+    }
+    const run = el('button', 'lab-run', '▶ Deneyi başlat');
+    const goals = el('ul', 'lab-goals');
+    const goalEls = spec.hedefler.map((h) => { const li = el('li', '', h.metin); goals.appendChild(li); return li; });
+    run.onclick = () => {
+      if (running) return;
+      running = true; run.disabled = true;
+      const res = spec.sim(v), t0 = performance.now();
+      out.textContent = 'Deney sürüyor…';
+      const tick = () => {
+        const t = Math.min(1, (performance.now() - t0) / 3200);
+        draw(res, t);
+        if (t < 1) return requestAnimationFrame(tick);
+        running = false; run.disabled = false;
+        trials.push({ v: { ...v }, kotu: res.kotu });
+        out.textContent = `Deneme ${trials.length}: ${res.sonuc}`;
+        out.className = 'lab-out ' + (res.kotu ? 'bad' : 'good');
+        const done = spec.hedefler.map((h, i) => { const ok = h.test(trials); goalEls[i].classList.toggle('done', ok); return ok; });
+        if (done.every(Boolean)) { show(run, false); actFinish(spec.bitis, resolve, { trials }); }
+      };
+      requestAnimationFrame(tick);
+    };
+    left.append(cv, out); right.append(run, goals);
+    wrap.append(left, right); body.appendChild(wrap);
+    draw(spec.sim(v), 0);
+  });
+}
+
 // ---------- Defter görünümü ----------
 export function showNotebook(entries) {
   const box = $('notebook-body');

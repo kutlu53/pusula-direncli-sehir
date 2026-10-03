@@ -85,7 +85,7 @@ export class Player {
     // Üçüncü şahıs kamera
     const cp = Math.cos(this.pitch), d = this.dist;
     const cx = p.x - sin * cp * d, cz = p.z + cos * cp * d;
-    const cy = Math.max(p.y + 2 + Math.sin(this.pitch) * d, groundHeight(cx, cz) + 1.2);
+    const cy = Math.max(p.y + 2 + Math.sin(this.pitch) * d, groundHeight(cx, cz) + 2.6);
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(p.x, p.y + 2.2, p.z);
   }

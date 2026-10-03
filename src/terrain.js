@@ -67,6 +67,8 @@ export const PLACES = {
   findik: { x: 60, z: 190, ad: 'Fındık Bahçesi' },
   boztepe: { x: BOZTEPE.x, z: BOZTEPE.z, ad: 'Boztepe' },
   teleferik: { x: -55, z: coastZ(-55) + 14, ad: 'Teleferik' },
+  afad: { x: riverX(BRIDGE_Z) - 46, z: BRIDGE_Z + 16, ad: 'AFAD çadırı' },
+  kemal: { x: -76, z: 62, ad: 'Kemal Bey' },
 };
 
 // 2. bölümde havadan aranan riskli yerler

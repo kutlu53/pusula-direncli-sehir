@@ -224,3 +224,32 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
   .layer-opts .opt { padding: 3px; font-size: 12px; }
   #map-risk { margin-top: 6px; }
 }
+
+/* ---------- 4. bölüm: deneyler ---------- */
+.lab-wrap { display: flex; gap: 14px; align-items: flex-start; }
+.lab-left { flex: 1.5; min-width: 0; }
+.lab-right { flex: 1; min-width: 0; }
+.lab-canvas { width: 100%; display: block; border-radius: 8px; border: 2px solid #b9a77a; }
+.lab-out { margin: 6px 0 0; font-weight: 700; font-size: 15px; min-height: 22px; }
+.lab-out.bad { color: var(--red); }
+.lab-out.good { color: #1f7a3a; }
+.lab-var { margin-bottom: 7px; }
+.lab-var span { display: block; font-weight: 700; font-size: 13px; color: var(--teal-d); }
+.lab-opts { display: flex; gap: 5px; margin-top: 3px; }
+.lab-opts button { margin: 0; padding: 6px 4px; font-size: 13px; background: var(--paper2); color: var(--ink); border: 2px solid #b9a77a; }
+.lab-opts button.on { background: var(--teal); border-color: var(--teal-d); color: #fff; }
+.lab-run { margin-top: 4px; background: var(--gold); color: #2a1c00; }
+.lab-run:hover { background: #c98f1f; }
+.lab-goals { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; line-height: 1.35; }
+.lab-goals li { padding: 5px 8px 5px 30px; position: relative; border-radius: 8px; background: rgba(255, 255, 255, .55); margin-bottom: 5px; }
+.lab-goals li::before { content: '☐'; position: absolute; left: 9px; }
+.lab-goals li.done { background: #cfe9c4; }
+.lab-goals li.done::before { content: '✅'; left: 6px; }
+@media (max-width: 600px) { .lab-wrap { flex-direction: column; } .lab-left, .lab-right { width: 100%; flex: none; } }
+@media (max-height: 480px) {
+  .lab-left { flex: 1.1; }
+  .lab-var { margin-bottom: 4px; }
+  .lab-opts button { padding: 4px 3px; font-size: 12px; }
+  .lab-goals { font-size: 12px; margin-top: 6px; }
+  .lab-goals li { padding-top: 3px; padding-bottom: 3px; }
+}
