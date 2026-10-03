@@ -164,6 +164,14 @@ function label(g, text, x, z, opt = {}) {
   g.fillText(text, toPx(x), toPx(z));
 }
 
+// k: küçük ekranda harita küçülünce işaretin okunabilir kalması için büyütme katsayısı
+const markScale = (cv) => Math.min(2.4, Math.max(1, MAP / (cv.clientWidth || MAP) / 1.5));
+function planMark(g, p, k = 1) {
+  g.fillStyle = p.renk; g.beginPath(); g.arc(toPx(p.x), toPx(p.z), 11 * k, 0, 7); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 2.5 * k; g.stroke();
+  g.fillStyle = '#fff'; g.font = `bold ${Math.round(13 * k)}px Segoe UI, sans-serif`; g.textAlign = 'center'; g.fillText(p.harf, toPx(p.x), toPx(p.z) + 4.5 * k);
+}
+
 function mapFurniture(g) { // kuzey oku ve ölçek çubuğu
   g.fillStyle = 'rgba(246,239,220,.9)'; g.fillRect(MAP - 58, 12, 46, 62); g.fillRect(14, MAP - 50, 176, 38);
   g.fillStyle = '#17313a'; g.font = 'bold 18px Segoe UI, sans-serif'; g.textAlign = 'center';
@@ -178,7 +186,7 @@ function mapFurniture(g) { // kuzey oku ve ölçek çubuğu
 }
 
 // revealed: [minX,maxX,minZ,maxZ] dizileri; found: bulunan yer anahtarları; pins: oyuncunun kendi işaretleri
-export function drawMap({ buildings, revealed, found, player, heading, pins = [], risk = false, devices = [] }) {
+export function drawMap({ buildings, revealed, found, player, heading, pins = [], risk = false, devices = [], plan = [] }) {
   if (!base) buildBase(buildings);
   const g = $('map-canvas').getContext('2d');
   g.fillStyle = '#e4d6ad'; g.fillRect(0, 0, MAP, MAP);
@@ -199,6 +207,7 @@ export function drawMap({ buildings, revealed, found, player, heading, pins = []
     g.fillStyle = { sel: '#2f7fe0', heyelan: '#e0452f', guvenli: '#2fa84f' }[d.t];
     g.fillRect(toPx(d.x) - 5, toPx(d.z) - 5, 10, 10); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(toPx(d.x) - 5, toPx(d.z) - 5, 10, 10);
   }
+  for (const p of plan) planMark(g, p);
   label(g, 'K A R A D E N İ Z', 60, coastZ(60) - 190, { size: 18, italic: true, color: '#1d5f86' });
   label(g, 'Melet Irmağı', riverX(300) + 62, 300, { size: 12, italic: true, color: '#1d5f86' });
   label(g, 'İskele', PLACES.iskele.x + 6, PLACES.iskele.z - 30, { size: 12 });
@@ -466,11 +475,7 @@ export function layerTable(yerler, buildings) {
     const draw = () => {
       g.drawImage(base, 0, 0);
       for (const k of ['egim', 'taskin', 'risk']) if (on[k]) g.drawImage(layers[k], 0, 0, MAP, MAP);
-      for (const y of yerler) {
-        g.fillStyle = '#17313a'; g.beginPath(); g.arc(toPx(y.x), toPx(y.z), 13, 0, 7); g.fill();
-        g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.stroke();
-        g.fillStyle = '#fff'; g.font = 'bold 15px Segoe UI, sans-serif'; g.textAlign = 'center'; g.fillText(y.harf, toPx(y.x), toPx(y.z) + 5);
-      }
+      for (const y of yerler) planMark(g, { ...y, renk: '#17313a' }, markScale(cv) * 1.15);
       mapFurniture(g);
     };
     for (const [k, ad] of [['egim', 'Eğim katmanı'], ['taskin', 'Taşkın alanı katmanı']]) {
@@ -645,6 +650,74 @@ export function lab(spec) {
     left.append(cv, out); right.append(run, goals);
     wrap.append(left, right); body.appendChild(wrap);
     draw(spec.sim(v), 0);
+  });
+}
+
+// 7) Planlama masası: her öğe için haritada yer seç; güvenlik, erişim ve bütçe birlikte değerlendirilir
+export function planBoard(spec, buildings) {
+  return new Promise((resolve) => {
+    if (!base) buildBase(buildings);
+    if (!layers) buildLayers();
+    const body = actOpen('Planlama masası: Nereye ne kurulmalı?',
+      'Sağdan bir öğe seç, sonra haritada kurulacağı yere dokun. Yerini değiştirmek için tekrar seçip başka yere dokun.');
+    const wrap = el('div', 'layer-wrap'), left = el('div', 'layer-left'), right = el('div', 'layer-right');
+    const cv = el('canvas', 'act-canvas plan-canvas'); cv.width = cv.height = MAP;
+    const g = cv.getContext('2d'), plan = {}, rows = {};
+    let active = spec.ogeler[0].key, risk = true, deneme = 0, checked = false, bitti = false;
+    const riskBtn = el('button', 'layer-btn on', 'Risk katmanı');
+    riskBtn.onclick = () => { risk = !risk; riskBtn.classList.toggle('on', risk); draw(); };
+    const budget = el('div', 'plan-budget'), check = el('button', '', 'Planı değerlendir');
+    const draw = () => {
+      g.drawImage(base, 0, 0);
+      if (risk) g.drawImage(layers.risk, 0, 0, MAP, MAP);
+      for (const o of spec.ogeler) if (plan[o.key]) planMark(g, { ...o, ...plan[o.key] }, markScale(cv));
+      mapFurniture(g);
+    };
+    const sync = () => {
+      const r = spec.evaluate(plan, buildings);
+      for (const o of spec.ogeler) {
+        const row = rows[o.key], e = r.ogeler[o.key];
+        row.classList.toggle('on', o.key === active);
+        row.querySelector('.plan-cost').textContent = plan[o.key] ? `maliyet ${e.maliyet}` : 'yer seçilmedi';
+        row.classList.toggle('right', checked && e.ok); row.classList.toggle('wrong', checked && !e.ok);
+        row.querySelector('.plan-why').textContent = checked ? (e.ok ? '✅ ' : '❌ ') + e.neden : '';
+      }
+      budget.textContent = `Bütçe: ${r.butce} / ${r.limit}`;
+      budget.classList.toggle('over', !r.butceOk);
+      check.disabled = spec.ogeler.some((o) => !plan[o.key]);
+      return r;
+    };
+    for (const o of spec.ogeler) {
+      const row = el('div', 'plan-row');
+      const dot = el('b', '', o.harf); dot.style.background = o.renk;
+      row.append(dot, el('span', 'plan-name', o.ad), el('span', 'plan-cost'), el('div', 'plan-why'));
+      row.onclick = () => { if (bitti) return; active = o.key; sync(); };
+      rows[o.key] = row; right.appendChild(row);
+    }
+    cv.onclick = (e) => {
+      if (bitti) return;
+      const [px, py] = canvasPos(cv, e);
+      plan[active] = { x: px / MAP * WORLD - HALF, z: py / MAP * WORLD - HALF };
+      checked = false;
+      const next = spec.ogeler.find((o) => !plan[o.key]);
+      if (next) active = next.key;
+      draw(); sync();
+    };
+    check.onclick = () => {
+      deneme++; checked = true;
+      const r = sync();
+      if (!r.gecti) {
+        show($('act-feedback'));
+        $('act-feedback').textContent = (r.butceOk ? '' : `Bütçe aşıldı (${r.butce} / ${r.limit}). Eğimli ya da merkeze uzak yerler pahalıdır; daha uygun yerler dene. `) +
+          'Kırmızı satırlardaki açıklamalara bak, yerleri düzelt ve planı yeniden değerlendir.';
+        return;
+      }
+      bitti = true; show(check, false);
+      actFinish(`Plan onaylandı! Bütçe: ${r.butce} / ${r.limit}. Yapılar düşük riskli yerlerde, taşkın yatağı park, dik yamaç ağaçlık.`, resolve, { plan, deneme, butce: r.butce });
+    };
+    left.append(riskBtn, cv); right.append(budget, check);
+    wrap.append(left, right); body.appendChild(wrap);
+    draw(); sync();
   });
 }
 

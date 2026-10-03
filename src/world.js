@@ -489,7 +489,7 @@ export function buildWorld({ lowGfx = false } = {}) {
   scene.add(marker);
 
   const flagBase = flag.geometry.attributes.position.array.slice();
-  const devices = [];
+  const devices = [], planObjs = [], planCols = [];
 
   return {
     scene, colliders, buildings, sun,
@@ -513,6 +513,48 @@ export function buildWorld({ lowGfx = false } = {}) {
       devices.push(g);
     },
     clearDevices() { devices.forEach((d) => scene.remove(d)); devices.length = 0; },
+    // 5. bölümde oyuncunun planladığı yapılar dünyaya kurulur
+    buildPlan(plan) {
+      this.clearPlan();
+      const add = (m) => { scene.add(m); planObjs.push(m); return m; };
+      const solid = (x, z, w, d) => { const c = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 }; colliders.push(c); planCols.push(c); };
+      const white = std(0xf4f1ea), red = std(0xc23b2e);
+      const roofOn = (x, y, z, w, d, mat) => { const r = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.72, 0.45, 4).rotateY(Math.PI / 4), mat)); r.scale.set(w * 1.05, 5, d * 1.05); r.position.set(x, y, z); add(r); };
+      const tr = (x, z, s) => {
+        const y = terrainHeight(x, z);
+        const t = shadowed(new THREE.Mesh(new THREE.ConeGeometry(1.6 * s, 5 * s, 7).translate(0, 3.6 * s, 0), std(0x3f9a4a, { flatShading: true })));
+        t.position.set(x, y, z); add(t); add(box(0.4 * s, 2 * s, 0.4 * s, std(0x6b4a2e), x, y + s, z));
+      };
+      for (const [key, p] of Object.entries(plan)) {
+        const y = terrainHeight(p.x, p.z);
+        if (key === 'okul') {
+          add(box(15, 8, 9, std(0xf3dfae), p.x, y + 3, p.z)); roofOn(p.x, y + 7, p.z, 15, 9, red);
+          add(box(0.2, 9, 0.2, white, p.x - 9.5, y + 4.5, p.z + 3)); add(box(2.6, 1.7, 0.1, red, p.x - 8.1, y + 8, p.z + 3));
+          solid(p.x, p.z, 15, 9);
+        } else if (key === 'hastane') {
+          add(box(13, 12, 11, white, p.x, y + 5, p.z));
+          add(box(4, 1.2, 0.3, red, p.x, y + 8, p.z + 5.6)); add(box(1.2, 4, 0.3, red, p.x, y + 8, p.z + 5.6));
+          solid(p.x, p.z, 13, 11);
+        } else if (key === 'konut') {
+          [[-8, -5], [8, -5], [0, 6]].forEach(([dx, dz], i) => {
+            const hy = terrainHeight(p.x + dx, p.z + dz);
+            add(box(7, 7, 7, std([0xd9e3ea, 0xf0d9c4, 0xcfdccf][i]), p.x + dx, hy + 2.5, p.z + dz)); roofOn(p.x + dx, hy + 6, p.z + dz, 7, 7, red);
+            solid(p.x + dx, p.z + dz, 7, 7);
+          });
+        } else if (key === 'park') {
+          const lawn = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 24), std(0x7cc46a));
+          lawn.position.set(p.x, y + 0.2, p.z); lawn.receiveShadow = true; add(lawn);
+          for (let i = 0; i < 6; i++) tr(p.x + Math.cos(i * 1.05) * 11, p.z + Math.sin(i * 1.05) * 11, 0.9);
+          add(box(3, 0.5, 0.9, std(0x8a6a48), p.x, y + 0.6, p.z));
+        } else if (key === 'agac') {
+          for (let i = 0; i < 16; i++) { const a = rand(i, 71) * 6.28, r = 3 + rand(i, 72) * 15; tr(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r, 0.55); }
+        }
+      }
+    },
+    clearPlan() {
+      planObjs.forEach((m) => scene.remove(m)); planObjs.length = 0;
+      planCols.forEach((c) => colliders.splice(colliders.indexOf(c), 1)); planCols.length = 0;
+    },
     // Işık sütunu yalnızca hedefe yaklaşınca görünür; öğrenci yönü pusulayla bulmalı
     showMarker(near) { marker.visible = !!marker.userData.active && near; },
     update(dt, t, playerPos, droneFlying = false) {

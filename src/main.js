@@ -4,7 +4,7 @@ import { buildWorld } from './world.js';
 import { Player } from './player.js';
 import { Drone } from './drone.js';
 import * as ui from './ui.js';
-import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS } from './story.js';
+import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN } from './story.js';
 import { Log } from './log.js';
 import { PLACES, M_PER_UNIT, riskAt, slopeAt } from './terrain.js';
 
@@ -40,9 +40,12 @@ resize();
 let mode = 'title'; // title | play | busy | map | menu | defter | end
 let state = fresh();
 function fresh() {
-  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0 };
+  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false, deneyler: 0, walked: 0, plan: null };
 }
 const step = () => STEPS[state.step];
+// Adımın hedefi: sabit yer ya da oyuncunun planında seçtiği yapı (önüne varılır)
+const hedefOf = (s) => s && (s.hedef || (s.hedefPlan && state.plan ? { x: state.plan[s.hedefPlan].x, z: state.plan[s.hedefPlan].z + 8 } : null));
+const planMarks = () => (state.plan ? PLAN.ogeler.map((o) => ({ ...o, ...state.plan[o.key] })) : []);
 const pieces = () => STEPS.slice(0, state.step).filter((s) => s.tur === 'parca').length;
 const note = (b, m) => state.defter.push({ b, m });
 const log = (entry) => Log.add({ ogrenci: state.code, ...entry });
@@ -58,8 +61,8 @@ function refresh() {
     gorev += ` (${state.fotolar.length}/${s.hedefler.length}). ` +
       (drone.active ? 'Hedefin üstüne gelince fotoğraf çek.' : `Drone'u uçur: ${isTouch ? '🛸 düğmesi' : 'F tuşu'}.`);
   }
-  ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : bolum === 3 ? `📡 ${state.cihazlar.length}/3` : `🧪 ${state.deneyler}/2`, puan: state.score });
-  world.setTarget(s && s.hedef ? s.hedef : null, !!s && s.tur === 'parca');
+  ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : bolum === 3 ? `📡 ${state.cihazlar.length}/3` : bolum === 4 ? `🧪 ${state.deneyler}/2` : `🏗️ ${state.plan ? 5 : 0}/5`, puan: state.score });
+  world.setTarget(hedefOf(s), !!s && s.tur === 'parca');
   document.body.classList.toggle('has-drone', !!s && s.tur === 'drone');
   document.body.classList.toggle('drone', drone.active);
 }
@@ -74,6 +77,7 @@ function begin(saved) {
   drone.stop();
   world.clearDevices();
   state.cihazlar.forEach((c) => world.addDevice(c.x, c.z, c.t));
+  if (state.plan) world.buildPlan(state.plan); else world.clearPlan();
   mapRisk = false;
   player.place(state.x, state.z, 0);
   player.walked = state.walked;
@@ -184,7 +188,7 @@ function openMap() {
     revealed: past.filter((s) => s.acar).map((s) => s.acar),
     found: past.filter((s) => s.tur === 'parca').map((s) => s.id),
     pins: d.hedefler.filter((h) => state.fotolar.includes(h.key)),
-    risk: mapRisk && state.riskHarita, devices: state.cihazlar,
+    risk: mapRisk && state.riskHarita, devices: state.cihazlar, plan: planMarks(),
     player: drone.active ? drone.pos : player.pos, heading: player.heading,
   });
   $('map-risk').classList.toggle('hidden', !state.riskHarita);
@@ -214,8 +218,9 @@ function bearing(from, to) {
 }
 function targetInfo() {
   const s = step();
-  if (!s || !s.hedef) return null;
-  return { s, ...bearing(player.pos, s.hedef) };
+  const h = hedefOf(s);
+  if (!h) return null;
+  return { s, ...bearing(player.pos, h) };
 }
 function hint() {
   const s = step();
@@ -258,6 +263,13 @@ async function runActs(s, names) {
       state.score += Math.max(40, 100 - Math.max(0, r.trials.length - 2) * 10);
       state.deneyler++;
       note(...spec.defter);
+    } else if (name === 'plan') {
+      const r = await ui.planBoard(PLAN, world.buildings);
+      log({ olay: 'plan', soru: 'B5E1', secilen: JSON.stringify(Object.fromEntries(Object.entries(r.plan).map(([k, p]) => [k, [Math.round(p.x), Math.round(p.z)]]))), dogru: r.deneme + '. denemede', adim: s.id, metin: 'bütçe ' + r.butce });
+      state.score += Math.max(60, 180 - (r.deneme - 1) * 30);
+      state.plan = r.plan;
+      world.buildPlan(state.plan);
+      note('Planlama', 'Yapılar düşük riskli ve boş arsalara, taşkın yatağına park, dik yamaca ağaç. Güvenlik, erişim ve bütçe birlikte düşünülür.');
     } else if (name === 'katman') {
       const r = await ui.layerTable(KATMAN_YERLER, world.buildings);
       log({ olay: 'katman', soru: 'B3E1', secilen: JSON.stringify(r.secim), dogru: `${r.dogru}/${r.toplam}`, adim: s.id, metin: 'katman aç/kapat: ' + r.katmanKullanimi });
@@ -365,7 +377,7 @@ if (Log.load()) $('continue').classList.remove('hidden');
 
 // Otomatik oynanış testi için durum erişimi (?test=1)
 if (qp.has('test')) {
-  window.__oyun = { player, drone, STEPS, ISARET, FARKLAR, KATMAN_YERLER, riskAt, slopeAt,
+  window.__oyun = { player, drone, world, STEPS, ISARET, FARKLAR, KATMAN_YERLER, PLAN, riskAt, slopeAt, hedef: () => hedefOf(step()),
     get state() { return state; }, get mode() { return mode; } };
 }
 

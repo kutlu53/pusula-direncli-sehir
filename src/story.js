@@ -1,4 +1,4 @@
-import { PLACES, RISKS, BOZTEPE, coastZ, riverX } from './terrain.js';
+import { PLACES, RISKS, BOZTEPE, coastZ, riverX, riskAt, slopeAt, M_PER_UNIT } from './terrain.js';
 
 const SORU_KATMAN = {
   id: 'B3S1', beceri: 'Katmanları birlikte yorumlama',
@@ -12,8 +12,9 @@ export const CHAPTERS = [
   { no: 2, ad: 'Gökten Bakış', rozet: 'Gök Gözcüsü', simge: '🛸' },
   { no: 3, ad: 'Katmanlar', rozet: 'Katman Ustası', simge: '🗂️' },
   { no: 4, ad: 'Yerin Altı, Göğün Üstü', rozet: 'Deney Ustası', simge: '🧪' },
+  { no: 5, ad: 'Yeniden Kur', rozet: 'Şehir Plancısı', simge: '🏗️' },
 ];
-export const NEXT_CHAPTER = '5. Bölüm: Yeniden Kur — yakında';
+export const NEXT_CHAPTER = '6. Bölüm: Büyük Sınav — yakında';
 
 // Adım türleri: npc / parca / nesne (hedefe yürü, E ile etkileşim) ve drone (havadan hedefleri fotoğrafla).
 // Sıra: once diyaloğu → onEtkinlik → soru → sonra diyaloğu → etkinlikler → kapanis diyaloğu.
@@ -280,7 +281,92 @@ export const STEPS = [
     ],
     bolumSonu: 4,
   },
+
+  // ---------------- 5. BÖLÜM: YENİDEN KUR ----------------
+  {
+    id: 'plan', bolum: 5, hedef: PLACES.afad, tur: 'npc',
+    gorev: 'AFAD çadırındaki planlama toplantısına katıl (Melet Köprüsü\'nün batı ucu)',
+    once: [
+      ['Elif Abla', 'Hoş geldin kâşif! Bugün büyük gün: belediye, şehrin yeni planını bizden istiyor. Hasan Usta ve Kemal Bey telsizde.'],
+      ['Kemal Bey (telsiz)', 'Ben hazırım! Yeni bir okul, bir hastane ve riskli yerlerde oturan aileler için konutlar yapacağız. Yeter ki bana doğru yeri gösterin.'],
+      ['Hasan Usta (telsiz)', 'Unutma kâşif: üç şeyi birlikte düşüneceksin. Güvenlik, erişim ve bütçe. Birini unutursan plan geri döner.'],
+      ['Elif Abla', 'İki işimiz daha var: ırmağın taşkın yatağını parka çevirmek ve çıplak kalan dik yamacı ağaçlandırmak. Planlama masası senin!'],
+    ],
+    onEtkinlik: ['plan'],
+    soru: {
+      id: 'B5S1', beceri: 'Mekânsal karar verme',
+      metin: 'Okul için iki arsa var: biri merkeze çok yakın ama sel riskli, diğeri biraz uzak ama düşük riskli. Hangisi seçilmeli?',
+      secenekler: [
+        'Yakın olan; çocuklar yürüyerek gider',
+        'Düşük riskli olan; can güvenliği önce gelir, uzaklık yol ve servisle çözülür',
+        'Hangisi ucuzsa o',
+        'Fark etmez, ikisi de olur',
+      ], dogru: 1,
+      aciklama: 'Yer seçerken önce can güvenliği düşünülür. Uzaklık yol ya da servisle çözülebilir; ama riskli yere kurulan bir okulu afetten korumak çok zordur.',
+    },
+    sonra: [
+      ['Kemal Bey (telsiz)', 'Plan onaylandı! Ekiplerim işe koyuldu bile. Okulun temelini bugün atıyoruz; töreni sensiz yapmayız.'],
+      ['Elif Abla', 'Haritanı aç; seçtiğin yerler işaretlendi. Yeni okulun yerine git, hepimiz orada buluşalım.'],
+    ],
+  },
+  {
+    id: 'temel', bolum: 5, tur: 'nesne', hedefPlan: 'okul', etiket: 'Törene katıl',
+    gorev: 'Haritanda yerini seçtiğin yeni okula git (haritada O harfi)',
+    once: [
+      ['Kemal Bey', 'İşte okulumuz! Sağlam zemine, düşük riskli yere. İlk kez bir binayı gönül rahatlığıyla yapıyorum.'],
+      ['Hasan Usta (telsiz)', 'Kırk yıl harita çizdim; ama haritayı karara dönüştüren sen oldun, kâşif.'],
+    ],
+    etkinlikler: ['ozet5'],
+    kapanis: [
+      ['Elif Abla (telsiz)', 'Şehir artık daha hazırlıklı. Ama gerçek sınav, afet geldiğinde verilir. Meteoroloji önümüzdeki günler için şiddetli yağış uyarısı yaptı.'],
+      ['Elif Abla (telsiz)', 'Sıradaki görevde planının işe yarayıp yaramadığını göreceğiz. Hazırlan!'],
+    ],
+    bolumSonu: 5,
+  },
 ];
+
+// ---------------- 5. bölüm: planlama masası ----------------
+const MERKEZ = { x: 60, z: coastZ(60) + 70 };
+export const PLAN = {
+  limit: 125,
+  ogeler: [
+    { key: 'okul', harf: 'O', ad: 'Okul', renk: '#d98a1f', taban: 20, tur: 'yapi', erisim: true },
+    { key: 'hastane', harf: 'H', ad: 'Hastane', renk: '#d0392b', taban: 30, tur: 'yapi', erisim: true },
+    { key: 'konut', harf: 'K', ad: 'Yeni konutlar', renk: '#7a5ac0', taban: 25, tur: 'yapi' },
+    { key: 'park', harf: 'P', ad: 'Taşkın parkı', renk: '#2f7fe0', taban: 8, tur: 'sel' },
+    { key: 'agac', harf: 'A', ad: 'Ağaçlandırma', renk: '#2f8f4f', taban: 6, tur: 'heyelan' },
+  ],
+  // Her öğe için: uygun mu, neden, maliyeti. Maliyet = taban + eğim payı + merkeze uzaklık (yol, altyapı) payı.
+  evaluate(plan, buildings) {
+    const out = { ogeler: {}, butce: 0, limit: PLAN.limit };
+    for (const o of PLAN.ogeler) {
+      const p = plan[o.key];
+      if (!p) { out.ogeler[o.key] = { ok: false, neden: 'Henüz yerleştirilmedi.', maliyet: 0 }; continue; }
+      const r = riskAt(p.x, p.z), uzak = Math.hypot(p.x - MERKEZ.x, p.z - MERKEZ.z), km = (uzak * M_PER_UNIT / 1000).toFixed(1);
+      let ok = true, neden, maliyet = o.taban;
+      if (o.tur === 'yapi') {
+        maliyet += Math.round(slopeAt(p.x, p.z) * 60) + Math.max(0, Math.round((uzak - 150) * 0.08));
+        const dolu = buildings.some((b) => Math.abs(b.x - p.x) < b.w / 2 + 9 && Math.abs(b.z - p.z) < b.d / 2 + 9);
+        if (r === 'su') { ok = false; neden = 'Burası su; yapı kurulamaz.'; }
+        else if (r === 'sel') { ok = false; neden = 'Sel riski taşıyan alanda (haritada mavi). Düşük riskli bir yer seç.'; }
+        else if (r === 'heyelan') { ok = false; neden = 'Heyelan riski taşıyan yamaçta (haritada kırmızı). Düşük riskli bir yer seç.'; }
+        else if (dolu) { ok = false; neden = 'Burada zaten yapılar var. Boş bir arsa seç.'; }
+        else if (o.erisim && uzak > 230) { ok = false; neden = `Şehir merkezine ${km} km; çok uzak. İnsanlar kolay ulaşabilmeli.`; }
+        else neden = `Düşük riskli, boş ve merkeze ${km} km.`;
+      } else if (r !== o.tur) {
+        ok = false;
+        neden = o.tur === 'sel' ? 'Taşkın parkı, ırmağın taşkın alanına (haritada mavi) kurulmalı.' : 'Ağaçlandırma, heyelan riskli dik yamaca (haritada kırmızı) yapılmalı.';
+      } else neden = o.tur === 'sel' ? 'Taşkın yatağı park olunca su taşsa da can ve mal kaybı olmaz.' : 'Ağaç kökleri yamaçtaki toprağı tutacak.';
+      out.ogeler[o.key] = { ok, neden, maliyet };
+      out.butce += maliyet;
+    }
+    out.butceOk = out.butce <= PLAN.limit;
+    out.gecti = out.butceOk && PLAN.ogeler.every((o) => out.ogeler[o.key].ok);
+    return out;
+  },
+};
+
+// 4. bölüm deneyleri: değişkenleri seç, dene, hedefleri tamamla
 
 // 4. bölüm deneyleri: değişkenleri seç, dene, hedefleri tamamla
 export const LABS = {
@@ -398,6 +484,18 @@ CLOZE.ozet4 = {
     { sec: ['çığ', 'heyelan', 'kuraklık'], dogru: 'heyelan' }, ' denir.',
   ],
   serbest: 'Yamaca ev yapmak isteyen birine bir cümleyle ne söylerdin?',
+};
+
+CLOZE.ozet5 = {
+  baslik: 'Planlama kararlarını özetle',
+  defter: 'Plan özetim',
+  parcalar: [
+    'Okul ve hastane gibi yapılar ', { sec: ['ırmak kenarındaki', 'düşük riskli', 'dik yamaçtaki'], dogru: 'düşük riskli' }, ' yerlere kurulmalıdır. Taşkın yatağı ',
+    { sec: ['konut', 'park', 'hastane'], dogru: 'park' }, ' olarak kullanılırsa su taşınca zarar az olur. Dik yamaçlar ',
+    { sec: ['ev yapılarak', 'ağaçlandırılarak'], dogru: 'ağaçlandırılarak' }, ' korunur. Plan yaparken güvenlik, erişim ve ',
+    { sec: ['hava durumu', 'bütçe'], dogru: 'bütçe' }, ' birlikte düşünülür.',
+  ],
+  serbest: 'Belediye başkanı olsaydın şehrini afetlere karşı korumak için ilk ne yapardın? Neden?',
 };
 
 export const FARKLAR = [

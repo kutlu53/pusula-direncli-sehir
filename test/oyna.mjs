@@ -25,7 +25,7 @@ await sleep(1500);
 
 const G = () => page.evaluate(() => {
   const o = window.__oyun, s = o.STEPS[o.state.step];
-  return { mode: o.mode, step: o.state.step, id: s?.id, tur: s?.tur, hedef: s?.hedef, x: o.player.pos.x, z: o.player.pos.z, y: o.player.pos.y,
+  return { mode: o.mode, step: o.state.step, id: s?.id, tur: s?.tur, hedef: o.hedef(), x: o.player.pos.x, z: o.player.pos.z, y: o.player.pos.y,
     score: o.state.score, fot: o.state.fotolar, cih: o.state.cihazlar.length, droneOn: o.drone.active, dx: o.drone.pos.x, dz: o.drone.pos.z,
     heading: o.player.heading };
 });
@@ -107,7 +107,40 @@ async function answerQuiz() {
 // ---- Etkinlikler
 async function doActivity() {
   const has = (q) => page.$(q).then((h) => !!h);
-  if (await has('.nb-grid')) {
+  if (await has('.plan-canvas')) {
+    // Her öğe için kurala uyan en ucuz yeri sayfadaki değerlendirme işleviyle bul
+    const sites = await page.evaluate(() => {
+      const o = window.__oyun, P = o.PLAN, B = o.world.buildings, out = {};
+      for (const it of P.ogeler) {
+        let best = null;
+        for (let x = -200; x <= 400; x += 6) for (let z = -120; z <= 260; z += 6) {
+          if (Object.values(out).some((q) => Math.hypot(q.x - x, q.z - z) < 30)) continue;
+          const okAt = (dx, dz) => P.evaluate({ [it.key]: { x: x + dx, z: z + dz } }, B).ogeler[it.key];
+          const e = okAt(0, 0);
+          // tıklama hassasiyeti düşük olduğundan çevresi de uygun olan yerleri seç
+          if (e.ok && (!best || e.maliyet < best.m) && [[9, 0], [-9, 0], [0, 9], [0, -9], [7, 7], [-7, -7], [7, -7], [-7, 7]].every(([a, c]) => okAt(a, c).ok)) best = { x, z, m: e.maliyet };
+        }
+        out[it.key] = best;
+      }
+      return out;
+    });
+    note('Plan için bulunan yerler: ' + JSON.stringify(sites));
+    const rows = await page.$$('.plan-row');
+    const keys = ['okul', 'hastane', 'konut', 'park', 'agac'];
+    const put = async (i, p) => { await rows[i].click(); await clickCanvas('.plan-canvas', (p.x + 450) / 900, (p.z + 450) / 900); await sleep(120); };
+    await put(0, sites.park); // okulu bilerek taşkın alanına koy
+    for (let i = 1; i < 5; i++) await put(i, sites[keys[i]]);
+    await clickText('.layer-right > button', 'Planı değerlendir'); await sleep(200);
+    const wrong = await page.$$eval('.plan-row.wrong', (l) => l.length);
+    if (wrong !== 1 || await vis('#act-next')) report.hatalar.push('Plan: riskli yerdeki okul reddedilmeliydi (yanlış satır: ' + wrong + ')');
+    note('Plan (hatalı deneme): ' + (await text('.plan-row.wrong .plan-why')).slice(0, 70));
+    await shot('act_plan_hatali');
+    await put(0, sites.okul);
+    await clickText('.layer-right > button', 'Planı değerlendir'); await sleep(200);
+    await shot('act_plan_onay');
+    note('Plan: ' + (await text('#act-feedback')).slice(0, 60));
+    if (!(await vis('#act-next'))) throw new Error('Plan onaylanmadı: ' + JSON.stringify(await page.$$eval('.plan-row', (l) => l.map((r) => r.textContent))));
+  } else if (await has('.nb-grid')) {
     const map = { Karadeniz: 1, Giresun: 3, Samsun: 5, Tokat: 6, Sivas: 7 }; // Samsun ve Giresun bilerek ters
     const disabled = await page.$eval('#act-body > button', (b) => b.disabled);
     if (!disabled) report.hatalar.push('Komşu: "Kontrol et" başta etkin olmamalıydı');
@@ -248,7 +281,7 @@ while (true) {
     await page.keyboard.press('KeyE'); await sleep(250);
     await handleBusy();
     report.adimlar.push({ id: s.id, yurume_sn: +r.sure.toFixed(0), takilma: r.stuck });
-    if (s.step === 1 || s.step === 6 || s.step === 9) await testOverlays('adim' + s.step);
+    if (s.step === 1 || s.step === 9 || s.step === 11) await testOverlays('adim' + s.step);
   } else if (s.tur === 'drone') {
     const H = await page.evaluate(() => window.__oyun.STEPS[window.__oyun.state.step].hedefler.map((h) => ({ key: h.key, x: h.x, z: h.z })));
     await page.keyboard.press('KeyF'); await sleep(400);

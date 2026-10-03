@@ -256,3 +256,19 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 
 /* Bilgi kutuları dokunuşu ve fareyi engellemez; altındaki sahne sürüklenebilir */
 #toast, #quest, #stats, #compass, #keys { pointer-events: none; }
+
+/* ---------- 5. bölüm: planlama masası ---------- */
+.plan-canvas { cursor: crosshair !important; margin-top: 6px; }
+.plan-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 8px; border-radius: 10px;
+  margin-bottom: 5px; background: rgba(255, 255, 255, .55); border: 2px solid transparent; cursor: pointer; }
+.plan-row.on { border-color: var(--gold); background: #fff; }
+.plan-row.right { background: #cfe9c4; }
+.plan-row.wrong { background: #f3cfc6; }
+.plan-row b { width: 24px; height: 24px; border-radius: 50%; color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.plan-name { font-weight: 700; font-size: 14px; }
+.plan-cost { font-size: 12px; opacity: .75; }
+.plan-why { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.3; }
+.plan-why:empty { display: none; }
+.plan-budget { font-weight: 800; font-size: 16px; margin: 8px 0 2px; color: var(--teal-d); }
+.plan-budget.over { color: var(--red); }
+@media (max-height: 480px) { .plan-row { padding: 3px 6px; margin-bottom: 3px; } .plan-name { font-size: 12.5px; } .plan-budget { margin: 4px 0 0; font-size: 14px; } }
