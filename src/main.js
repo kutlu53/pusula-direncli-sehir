@@ -9,15 +9,19 @@ import { PLACES, M_PER_UNIT } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
+// Dokunmatik cihaz: sanal joystick ve düğmeler açılır, grafik yükü azaltılır
+const isTouch = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('dokunmatik');
+document.body.classList.toggle('touch', isTouch);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+let pixelRatio = Math.min(devicePixelRatio, isTouch ? 1.5 : 2);
+renderer.setPixelRatio(pixelRatio);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5;
 
 const camera = new THREE.PerspectiveCamera(60, 1, 0.3, 9000);
-const world = buildWorld(renderer);
+const world = buildWorld({ lowGfx: isTouch });
 const player = new Player(world.scene, camera, world.colliders);
 ui.initCompass();
 
@@ -55,8 +59,11 @@ function begin(saved) {
   refresh();
   mode = 'play';
   if (!saved) {
-    Log.add({ ogrenci: state.code, olay: 'basla' });
-    ui.toast('Pusulan kuzeyi gösteriyor. İskelenin ucundaki Hasan Usta seni bekliyor!', 7000);
+    Log.add({ ogrenci: state.code, olay: 'basla', secilen: isTouch ? 'dokunmatik' : 'klavye' });
+    ui.toast(isTouch && innerHeight > innerWidth
+      ? 'Daha geniş görüş için telefonu yatay çevir. Sol alttaki çubukla yürü, ekranı sürükleyerek etrafa bak.'
+      : isTouch ? 'Sol alttaki çubukla yürü, ekranı sürükleyerek etrafa bak. Hasan Usta iskelede seni bekliyor!'
+        : 'Pusulan kuzeyi gösteriyor. İskelenin ucundaki Hasan Usta seni bekliyor!', 8000);
   }
 }
 
@@ -67,6 +74,7 @@ const locked = () => document.pointerLockElement === canvas;
 const unlock = () => { if (locked()) document.exitPointerLock(); };
 
 canvas.addEventListener('mousedown', () => {
+  if (isTouch) return;
   dragging = true;
   if (mode === 'play' && !locked()) canvas.requestPointerLock?.();
 });
@@ -75,6 +83,48 @@ addEventListener('mousemove', (e) => {
   if (mode === 'play' && (locked() || dragging)) player.look(e.movementX, e.movementY);
 });
 document.addEventListener('pointerlockchange', () => { if (!locked() && mode === 'play') openMenu(); });
+
+// Dokunmatik: ekranı sürükleyerek bakış
+let lookId = null, lookX = 0, lookY = 0;
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse') return;
+  lookId = e.pointerId; lookX = e.clientX; lookY = e.clientY;
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== lookId) return;
+  if (mode === 'play') player.look((e.clientX - lookX) * 2.4, (e.clientY - lookY) * 2.4);
+  lookX = e.clientX; lookY = e.clientY;
+});
+for (const ev of ['pointerup', 'pointercancel']) canvas.addEventListener(ev, (e) => { if (e.pointerId === lookId) lookId = null; });
+
+// Dokunmatik: sanal joystick
+const joy = $('joy'), knob = $('joy-knob');
+let joyId = null;
+function joyMove(e) {
+  const r = joy.getBoundingClientRect(), R = r.width / 2 - 14;
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const l = Math.hypot(dx, dy);
+  if (l > R) { dx *= R / l; dy *= R / l; }
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  const dead = l < R * 0.15;
+  keys.axisR = dead ? 0 : dx / R; keys.axisF = dead ? 0 : -dy / R;
+}
+joy.addEventListener('pointerdown', (e) => { joyId = e.pointerId; joy.setPointerCapture(joyId); joyMove(e); });
+joy.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) joyMove(e); });
+for (const ev of ['pointerup', 'pointercancel']) joy.addEventListener(ev, (e) => {
+  if (e.pointerId !== joyId) return;
+  joyId = null; keys.axisF = keys.axisR = 0; knob.style.transform = '';
+});
+const jump = $('t-jump');
+jump.addEventListener('pointerdown', () => { keys.Space = true; });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) jump.addEventListener(ev, () => { keys.Space = false; });
+const whenPlaying = (fn) => () => { if (mode === 'play') fn(); };
+$('t-map').onclick = whenPlaying(() => openMap());
+$('t-hint').onclick = whenPlaying(() => hint());
+$('t-menu').onclick = whenPlaying(() => openMenu());
+$('prompt').onclick = whenPlaying(() => interact());
+$('map-close').onclick = () => { if (mode === 'map') closeOverlay('map'); };
+addEventListener('contextmenu', (e) => { if (isTouch) e.preventDefault(); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 addEventListener('keydown', (e) => {
@@ -166,9 +216,20 @@ if (qp.has('oto')) {
 
 // ---------- Döngü ----------
 const clock = new THREE.Clock();
-let titleAngle = 0, saveTimer = 0;
+let titleAngle = 0, saveTimer = 0, fpsTime = 0, fpsFrames = 0;
+// Cihaz zorlanıyorsa önce çözünürlüğü, sonra gölgeleri düşür
+function adaptQuality(rawDt) {
+  fpsTime += rawDt; fpsFrames++;
+  if (fpsTime < 4) return;
+  const fps = fpsFrames / fpsTime;
+  fpsTime = fpsFrames = 0;
+  if (fps > 26) return;
+  if (pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.5); renderer.setPixelRatio(pixelRatio); resize(); }
+  else if (world.sun.castShadow) world.sun.castShadow = false;
+}
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), t = clock.elapsedTime;
+  if (document.visibilityState === 'visible' && rawDt < 1) adaptQuality(rawDt);
   if (mode === 'title') {
     // Açılışta şehrin üzerinde ağır bir tur
     titleAngle += dt * 0.05;
@@ -183,7 +244,8 @@ renderer.setAnimationLoop(() => {
     world.showMarker(!!ti && (ti.s.tur === 'npc' || ti.dist < 120));
     if (mode === 'play') {
       state.time += dt;
-      ui.setPrompt(ti && ti.dist < 6 ? (ti.s.tur === 'npc' ? 'E — Konuş' : 'E — Harita parçasını al') : '');
+      const key = isTouch ? '' : 'E — ';
+      ui.setPrompt(ti && ti.dist < 6 ? key + (ti.s.tur === 'npc' ? 'Konuş' : 'Harita parçasını al') : '');
       if ((saveTimer += dt) > 10) { saveTimer = 0; save(); }
     }
   }

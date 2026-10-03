@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pusula: Dirençli Şehir</title>
   <link rel="stylesheet" href="./style.css">
 </head>
@@ -13,15 +13,24 @@
     <div id="compass"><div id="compass-strip"></div><div id="compass-needle"></div><div id="compass-deg"></div></div>
     <div id="quest"><div class="label">GÖREV</div><div id="quest-text"></div></div>
     <div id="stats"><span id="pieces">🗺️ 0/4</span><span id="score">⭐ 0</span></div>
-    <div id="prompt" class="hidden"></div>
+    <button id="prompt" class="hidden"></button>
     <div id="toast" class="hidden"></div>
+    <div id="touch">
+      <div id="joy"><div id="joy-knob"></div></div>
+      <div id="tbtns">
+        <button id="t-menu" aria-label="Menü">☰</button>
+        <button id="t-hint" aria-label="İpucu">💡</button>
+        <button id="t-map" aria-label="Harita">🗺️</button>
+        <button id="t-jump" aria-label="Zıpla">⤒</button>
+      </div>
+    </div>
     <div id="keys">WASD yürü · Shift koş · Boşluk zıpla · Fare bak · E etkileşim · M harita · H ipucu · Esc menü</div>
   </div>
 
   <div id="dialog" class="hidden">
     <div id="dialog-name"></div>
     <div id="dialog-text"></div>
-    <div class="next">Devam etmek için tıkla veya E'ye bas ▸</div>
+    <div class="next">Devam etmek için dokun / tıkla ▸</div>
   </div>
 
   <div id="quiz" class="overlay hidden">
@@ -44,8 +53,8 @@
         <span><i style="background:#9c6b3f"></i>Yüksek</span>
         <span><i style="background:#5aa6d6"></i>Su</span>
         <span><i style="background:#7d7d86"></i>Yapı</span>
-        <span>Kapatmak için M</span>
       </div>
+      <button id="map-close">Haritayı kapat</button>
     </div>
   </div>
 

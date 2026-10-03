@@ -48,14 +48,17 @@ export class Player {
     const sin = Math.sin(this.heading), cos = Math.cos(this.heading);
     let f = 0, r = 0;
     if (canMove) {
-      f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-      r = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+      f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + (keys.axisF || 0);
+      r = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + (keys.axisR || 0);
     }
+    // Dokunmatik joystick analogdur: sonuna kadar itilince koşar
+    const analog = !!(keys.axisF || keys.axisR), mag = Math.min(1, Math.hypot(f, r));
     let dx = sin * f + cos * r, dz = -cos * f + sin * r;
     const len = Math.hypot(dx, dz);
     const p = this.pos, ground = groundHeight(p.x, p.z), onGround = p.y <= ground + 0.05;
     if (len > 0) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? RUN : WALK;
+      const run = keys.ShiftLeft || keys.ShiftRight || (analog && mag > 0.92);
+      const speed = run ? RUN : WALK * (analog ? Math.max(0.35, mag) : 1);
       dx = (dx / len) * speed * dt; dz = (dz / len) * speed * dt;
       let [nx, nz] = this.collide(p.x + dx, p.z + dz);
       if (!walkable(nx, nz)) { // kenar boyunca kaymayı dene
@@ -67,7 +70,7 @@ export class Player {
       let diff = target - this.model.rotation.y;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       this.model.rotation.y += diff * Math.min(1, dt * 12);
-      this.stride += dt * (speed === RUN ? 14 : 10);
+      this.stride += dt * (run ? 14 : 10);
     }
     this.moving += ((len > 0 ? 1 : 0) - this.moving) * Math.min(1, dt * 10);
     animateCharacter(this.model, this.stride, this.moving);

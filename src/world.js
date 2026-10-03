@@ -373,7 +373,7 @@ function buildBoats(scene) {
 }
 
 // ---------- Dünya ----------
-export function buildWorld(renderer) {
+export function buildWorld({ lowGfx = false } = {}) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(FOG, 0.0015);
 
@@ -387,7 +387,7 @@ export function buildWorld(renderer) {
   scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x6b7a4e, 1.7));
   const sun = new THREE.DirectionalLight(0xfff1d6, 4.2);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.setScalar(lowGfx ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -75, right: 75, top: 75, bottom: -75, near: 10, far: 420 });
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.6;
   scene.add(sun, sun.target);
@@ -430,7 +430,7 @@ export function buildWorld(renderer) {
   const flagBase = flag.geometry.attributes.position.array.slice();
 
   return {
-    scene, colliders, buildings,
+    scene, colliders, buildings, sun,
     setTarget(p, showPiece) {
       marker.userData.active = !!p;
       if (p) { marker.position.set(p.x, groundHeight(p.x, p.z), p.z); piece.visible = showPiece; }
