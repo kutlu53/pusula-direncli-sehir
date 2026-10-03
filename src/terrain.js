@@ -76,6 +76,18 @@ export const RISKS = {
   orman: { x: 150, z: 250, ad: 'Kesilen orman' },
 };
 
+// Eğim (yükselti farkı / yatay uzaklık) ve basit risk sınıfı: 3. bölümün katmanları bunlardan üretilir
+export function slopeAt(x, z) {
+  const e = 3;
+  return Math.hypot(terrainHeight(x + e, z) - terrainHeight(x - e, z), terrainHeight(x, z + e) - terrainHeight(x, z - e)) / (2 * e);
+}
+export function riskAt(x, z) {
+  const h = terrainHeight(x, z);
+  if (h < 0) return 'su';
+  if (Math.abs(x - riverX(z)) < 34 && h < 4) return 'sel';
+  return slopeAt(x, z) > 0.33 ? 'heyelan' : 'guvenli';
+}
+
 export function bridgeDeck(x) {
   const t = (x - PLACES.kopru.x) / BRIDGE_HALF;
   return 2.0 + 1.8 * Math.cos(t * Math.PI / 2);

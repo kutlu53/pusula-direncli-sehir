@@ -66,7 +66,7 @@ button:hover { background: var(--teal-d); transform: translateY(-1px); }
 #quiz-feedback { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: #fff; font-size: 16px; line-height: 1.45;
   border-left: 5px solid var(--teal); }
 .map-panel { width: min(700px, 100%); text-align: center; }
-#map-canvas { width: min(640px, 100%, 70vh); height: auto; border-radius: 8px; border: 2px solid #b9a77a; }
+#map-canvas { width: min(640px, 100%, 62vh); height: auto; border-radius: 8px; border: 2px solid #b9a77a; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; margin-top: 8px; }
 .legend i { display: inline-block; width: 13px; height: 13px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
 .badge { font-size: 54px; text-align: center; margin: 8px 0; }
@@ -194,4 +194,33 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
   .cloze { font-size: 15px; line-height: 1.9; }
   .air-row { max-width: 78%; margin: 0 auto; }
   .act-intro { font-size: 13px; }
+}
+
+/* ---------- 3. bölüm: katman masası ---------- */
+.layer-wrap { display: flex; gap: 14px; align-items: flex-start; }
+.layer-left { flex: 0 0 auto; width: min(46%, 54vh); }
+.layer-left .act-canvas { width: 100%; cursor: default; }
+.layer-right { flex: 1; min-width: 0; }
+.layer-toggles { display: flex; gap: 6px; margin-bottom: 6px; }
+.layer-btn { margin: 0; padding: 7px 8px; font-size: 13px; background: var(--paper2); color: var(--ink); border: 2px solid var(--teal); }
+.layer-btn:hover { background: #fff; }
+.layer-btn.on { background: var(--teal); color: #fff; }
+.layer-row { padding: 5px 8px; border-radius: 10px; margin-bottom: 5px; background: rgba(255, 255, 255, .55); border: 2px solid transparent; }
+.layer-row span { display: block; font-weight: 700; font-size: 14px; }
+.layer-row.right { background: #cfe9c4; border-color: #3d8a3a; }
+.layer-row.wrong { background: #f3cfc6; border-color: var(--red); }
+.layer-opts { display: flex; gap: 5px; margin-top: 3px; }
+.layer-opts .opt { margin: 0; padding: 5px 4px; font-size: 13px; background: var(--paper2); color: var(--ink); border: 2px solid #b9a77a; }
+.layer-opts .opt.on.sel { background: #2f7fe0; border-color: #1c56a0; color: #fff; }
+.layer-opts .opt.on.heyelan { background: #e0452f; border-color: #9c2a19; color: #fff; }
+.layer-opts .opt.on.guvenli { background: #2fa84f; border-color: #1c6c31; color: #fff; }
+#map-risk { margin-top: 10px; background: var(--gold); color: #2a1c00; }
+#map-risk:hover { background: #c98f1f; }
+@media (max-width: 600px) { .layer-wrap { flex-direction: column; } .layer-left { width: 100%; } }
+@media (max-height: 480px) {
+  .layer-left { width: min(40%, 62vh); }
+  .layer-row { padding: 3px 6px; margin-bottom: 3px; }
+  .layer-row span { font-size: 12px; }
+  .layer-opts .opt { padding: 3px; font-size: 12px; }
+  #map-risk { margin-top: 6px; }
 }

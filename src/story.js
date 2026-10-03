@@ -1,10 +1,18 @@
 import { PLACES, RISKS, BOZTEPE, coastZ, riverX } from './terrain.js';
 
+const SORU_KATMAN = {
+  id: 'B3S1', beceri: 'Katmanları birlikte yorumlama',
+  metin: 'Bir yerde eğim çok fazla ve ağaçlar kesilmiş. Katmanları üst üste koyan haritacı hangi sonuca varır?',
+  secenekler: ['Sel riski yüksektir', 'Heyelan riski yüksektir', 'Hiçbir risk yoktur', 'Kuraklık riski yüksektir'], dogru: 1,
+  aciklama: 'Dik eğim ve ağaçsız toprak bir araya gelince heyelan riski artar. Tek bir bilgi yetmez; katmanlar birlikte okununca risk ortaya çıkar.',
+};
+
 export const CHAPTERS = [
   { no: 1, ad: 'Kayıp Harita', rozet: 'Harita Çırağı', simge: '🧭' },
   { no: 2, ad: 'Gökten Bakış', rozet: 'Gök Gözcüsü', simge: '🛸' },
+  { no: 3, ad: 'Katmanlar', rozet: 'Katman Ustası', simge: '🗂️' },
 ];
-export const NEXT_CHAPTER = '3. Bölüm: Katmanlar — yakında';
+export const NEXT_CHAPTER = '4. Bölüm: Yerin Altı, Göğün Üstü — yakında';
 
 // Adım türleri: npc / parca / nesne (hedefe yürü, E ile etkileşim) ve drone (havadan hedefleri fotoğrafla).
 // Sıra: once diyaloğu → onEtkinlik → soru → sonra diyaloğu → etkinlikler → kapanis diyaloğu.
@@ -174,6 +182,54 @@ export const STEPS = [
     ],
     bolumSonu: 2,
   },
+
+  // ---------------- 3. BÖLÜM: KATMANLAR ----------------
+  {
+    id: 'masa', bolum: 3, hedef: PLACES.iskele, tur: 'npc',
+    gorev: 'Fotoğrafları iskeledeki Hasan Usta\'ya götür',
+    once: [
+      ['Hasan Usta', 'Fotoğrafların harika, kâşif! Ama tek tek fotoğraf yetmez. Tehlikeyi görmek için bilgileri üst üste koymak gerekir.'],
+      ['Hasan Usta', 'Bir saydam kâğıda eğimi, birine ırmağın taşkın alanını, birine yapıları çizeriz. Her biri bir katmandır. Üst üste koyunca risk ortaya çıkar.'],
+      ['Hasan Usta', 'Bugün bunu bilgisayarlar yapıyor; adına Coğrafi Bilgi Sistemi, kısaca CBS deniyor. Katman masamı aç: altı yer işaretledim, her birinin riskini sen belirle.'],
+    ],
+    onEtkinlik: ['katman'],
+    soru: SORU_KATMAN,
+    sonra: [
+      ['Hasan Usta', 'Risk haritan hazır! Artık haritanı açınca "Risk katmanı" düğmesiyle onu görebilirsin: mavi sel, kırmızı heyelan, yeşil düşük risk.'],
+      ['Hasan Usta', 'Şimdi haritayı sahada kullanma zamanı. Sana üç cihaz veriyorum; her birini haritana bakarak doğru yere yerleştir.'],
+    ],
+  },
+  {
+    id: 'sensor', bolum: 3, tur: 'sensor',
+    gorev: 'Cihazları risk haritana göre doğru yerlere yerleştir',
+    cihazlar: [
+      { t: 'sel', ad: 'Su seviyesi sensörü', nereye: 'sel riski olan bir yere (haritada mavi)',
+        tamam: 'Su seviyesi sensörü yerinde! Irmak yükselmeye başlarsa taşkından önce uyarı verecek.' },
+      { t: 'heyelan', ad: 'Toprak hareket sensörü', nereye: 'heyelan riski olan dik bir yamaca (haritada kırmızı)',
+        tamam: 'Toprak hareket sensörü yerinde! Yamaç kaymaya başlarsa erkenden haber verecek.' },
+      { t: 'guvenli', ad: 'Toplanma alanı tabelası', nereye: 'düşük riskli, düz bir yere (haritada yeşil)',
+        tamam: 'Toplanma alanı hazır! AFAD her mahalle için böyle alanlar belirler; afet anında insanlar burada güvenle buluşur.' },
+    ],
+    sonra: [
+      ['Hasan Usta (telsiz)', 'Üç cihaz da doğru yerde. Haritayı yalnızca okumadın; onunla karar verdin. Gerçek bir haritacı böyle çalışır!'],
+    ],
+    etkinlikler: ['ozet3'],
+    kapanis: [
+      ['Hasan Usta (telsiz)', 'Artık tehlikenin NEREDE olduğunu biliyoruz. Peki sel ve heyelan NASIL oluşur? Yağmur, eğim ve toprak arasında ne var?'],
+      ['Hasan Usta (telsiz)', 'Sıradaki görevde deney yapacağız: yerin altına ve göğün üstüne bakacağız.'],
+    ],
+    bolumSonu: 3,
+  },
+];
+
+// 3. bölüm katman masasındaki yerler; "dogru" değeri arazi modelindeki risk sınıfıyla aynıdır
+export const KATMAN_YERLER = [
+  { harf: 'A', ad: 'Irmak kenarındaki evler', x: RISKS.taskin.x + 20, z: RISKS.taskin.z, dogru: 'sel' },
+  { harf: 'B', ad: 'Boztepe yamacındaki evler', x: RISKS.yamac.x, z: RISKS.yamac.z, dogru: 'heyelan' },
+  { harf: 'C', ad: 'Şehir merkezi', x: 70, z: coastZ(70) + 70, dogru: 'guvenli' },
+  { harf: 'D', ad: 'Ormanı kesilen yamaç', x: RISKS.orman.x, z: RISKS.orman.z, dogru: 'heyelan' },
+  { harf: 'E', ad: 'Irmak ağzındaki düzlük', x: riverX(-40) + 22, z: -40, dogru: 'sel' },
+  { harf: 'F', ad: 'Doğu mahallesi', x: 330, z: 60, dogru: 'guvenli' },
 ];
 
 // ---------------- Kâşif Defteri etkinlikleri ----------------
@@ -214,6 +270,17 @@ export const CLOZE = {
     ],
     serbest: 'Sence şehir büyürken riskli yerlere ev yapılmaması için ne yapılmalı? Kendi cümlenle yaz:',
   },
+};
+
+CLOZE.ozet3 = {
+  baslik: 'Risk haritasını özetle',
+  defter: 'Risk özetim',
+  parcalar: [
+    'Bilgileri üst üste koyarak incelemeye ', { sec: ['ölçek', 'katman', 'pusula'], dogru: 'katman' }, ' yöntemi denir. Eğimin çok olduğu yamaçlarda ',
+    { sec: ['sel', 'heyelan'], dogru: 'heyelan' }, ', ırmak kenarındaki düzlüklerde ', { sec: ['sel', 'heyelan'], dogru: 'sel' },
+    ' riski yüksektir. Toplanma alanı ', { sec: ['dik yamaçtaki', 'ırmak kenarındaki', 'düşük riskli'], dogru: 'düşük riskli' }, ' bir yere kurulur.',
+  ],
+  serbest: 'Kendi mahallende ya da okulunun çevresinde riskli olabilecek bir yer var mı? Neden öyle düşünüyorsun?',
 };
 
 export const FARKLAR = [

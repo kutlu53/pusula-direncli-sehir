@@ -1,4 +1,4 @@
-import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, RISKS, riverX, coastZ, fbm } from './terrain.js';
+import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, RISKS, riverX, coastZ, fbm, slopeAt, riskAt } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (el, on = true) => el.classList.toggle('hidden', !on);
@@ -137,6 +137,24 @@ function buildBase(buildings) {
   for (const b of buildings) b2.fillRect(toPx(b.x - b.w / 2), toPx(b.z - b.d / 2), (b.w / WORLD) * MAP, (b.d / WORLD) * MAP);
 }
 
+// CBS katmanları: eğim, taşkın alanı ve bunların birleşimi olan risk
+let layers = null;
+function buildLayers() {
+  const N = 256, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
+  layers = { egim: mk(), taskin: mk(), risk: mk() };
+  const img = {};
+  for (const k in layers) img[k] = layers[k].getContext('2d').createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = ((i + 0.5) / N) * WORLD - HALF, z = ((j + 0.5) / N) * WORLD - HALF, o = (j * N + i) * 4, r = riskAt(x, z);
+    if (r === 'su') continue;
+    const t = Math.min(1, Math.max(0, (slopeAt(x, z) - 0.08) / 0.5));
+    img.egim.data.set([235, 200 - 160 * t, 40, 40 + 190 * t], o);
+    if (r === 'sel') img.taskin.data.set([30, 100, 225, 185], o);
+    img.risk.data.set(r === 'sel' ? [30, 100, 225, 150] : r === 'heyelan' ? [215, 55, 40, 120] : [60, 170, 80, 80], o);
+  }
+  for (const k in layers) layers[k].getContext('2d').putImageData(img[k], 0, 0);
+}
+
 function label(g, text, x, z, opt = {}) {
   g.font = `${opt.italic ? 'italic ' : ''}bold ${opt.size || 13}px Segoe UI, sans-serif`;
   g.textAlign = 'center';
@@ -160,7 +178,7 @@ function mapFurniture(g) { // kuzey oku ve ölçek çubuğu
 }
 
 // revealed: [minX,maxX,minZ,maxZ] dizileri; found: bulunan yer anahtarları; pins: oyuncunun kendi işaretleri
-export function drawMap({ buildings, revealed, found, player, heading, pins = [] }) {
+export function drawMap({ buildings, revealed, found, player, heading, pins = [], risk = false, devices = [] }) {
   if (!base) buildBase(buildings);
   const g = $('map-canvas').getContext('2d');
   g.fillStyle = '#e4d6ad'; g.fillRect(0, 0, MAP, MAP);
@@ -176,6 +194,11 @@ export function drawMap({ buildings, revealed, found, player, heading, pins = []
   for (const [x0, x1, z0, z1] of revealed) g.rect(toPx(x0), toPx(z0), toPx(x1) - toPx(x0), toPx(z1) - toPx(z0));
   g.clip();
   g.drawImage(base, 0, 0);
+  if (risk) { if (!layers) buildLayers(); g.drawImage(layers.risk, 0, 0, MAP, MAP); }
+  for (const d of devices) {
+    g.fillStyle = { sel: '#2f7fe0', heyelan: '#e0452f', guvenli: '#2fa84f' }[d.t];
+    g.fillRect(toPx(d.x) - 5, toPx(d.z) - 5, 10, 10); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(toPx(d.x) - 5, toPx(d.z) - 5, 10, 10);
+  }
   label(g, 'K A R A D E N İ Z', 60, coastZ(60) - 190, { size: 18, italic: true, color: '#1d5f86' });
   label(g, 'Melet Irmağı', riverX(300) + 62, 300, { size: 12, italic: true, color: '#1d5f86' });
   label(g, 'İskele', PLACES.iskele.x + 6, PLACES.iskele.z - 30, { size: 12 });
@@ -425,6 +448,67 @@ export function compare(diffs, buildings) {
       if (found.size === diffs.length) actFinish('Üç değişimi de buldun! Şehir büyürken ırmak kenarına, yamaca ve ormanın içine doğru yayılmış.', resolve, { yanlis });
     };
     body.append(row, note, list);
+  });
+}
+
+// 5) Katman masası: katmanları aç/kapat, işaretli yerlerin riskini belirle
+export function layerTable(yerler, buildings) {
+  return new Promise((resolve) => {
+    if (!base) buildBase(buildings);
+    if (!layers) buildLayers();
+    const body = actOpen('Katman masası: Hangi yer, hangi risk?',
+      'Katmanları açıp kapatarak haritayı incele. Eğim katmanında renk sarıdan kırmızıya döndükçe yamaç dikleşir; taşkın alanı mavidir.');
+    const wrap = el('div', 'layer-wrap'), left = el('div', 'layer-left'), right = el('div', 'layer-right');
+    const toggles = el('div', 'layer-toggles'), cv = el('canvas', 'act-canvas');
+    cv.width = cv.height = MAP;
+    const g = cv.getContext('2d'), on = { egim: false, taskin: false, risk: false };
+    let used = 0;
+    const draw = () => {
+      g.drawImage(base, 0, 0);
+      for (const k of ['egim', 'taskin', 'risk']) if (on[k]) g.drawImage(layers[k], 0, 0, MAP, MAP);
+      for (const y of yerler) {
+        g.fillStyle = '#17313a'; g.beginPath(); g.arc(toPx(y.x), toPx(y.z), 13, 0, 7); g.fill();
+        g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.stroke();
+        g.fillStyle = '#fff'; g.font = 'bold 15px Segoe UI, sans-serif'; g.textAlign = 'center'; g.fillText(y.harf, toPx(y.x), toPx(y.z) + 5);
+      }
+      mapFurniture(g);
+    };
+    for (const [k, ad] of [['egim', 'Eğim katmanı'], ['taskin', 'Taşkın alanı katmanı']]) {
+      const b = el('button', 'layer-btn', ad);
+      b.onclick = () => { on[k] = !on[k]; used++; b.classList.toggle('on', on[k]); draw(); };
+      toggles.appendChild(b);
+    }
+    const secim = {}, rows = [];
+    const check = el('button', '', 'Risk haritasını oluştur');
+    check.disabled = true;
+    for (const y of yerler) {
+      const row = el('div', 'layer-row');
+      row.appendChild(el('span', '', `${y.harf} · ${y.ad}`));
+      const opts = el('div', 'layer-opts');
+      for (const [v, ad] of [['sel', 'Sel'], ['heyelan', 'Heyelan'], ['guvenli', 'Düşük risk']]) {
+        const b = el('button', 'opt ' + v, ad);
+        b.onclick = () => {
+          if (check.classList.contains('hidden')) return;
+          secim[y.harf] = v;
+          [...opts.children].forEach((c) => c.classList.toggle('on', c === b));
+          check.disabled = Object.keys(secim).length < yerler.length;
+        };
+        opts.appendChild(b);
+      }
+      row.appendChild(opts); right.appendChild(row); rows.push(row);
+    }
+    check.onclick = () => {
+      let n = 0;
+      yerler.forEach((y, i) => { const ok = secim[y.harf] === y.dogru; if (ok) n++; rows[i].classList.add(ok ? 'right' : 'wrong'); });
+      on.egim = on.taskin = false; on.risk = true; draw();
+      show(check, false); show(toggles, false);
+      const yanlis = yerler.filter((y) => secim[y.harf] !== y.dogru).map((y) => `${y.harf}: ${{ sel: 'sel', heyelan: 'heyelan', guvenli: 'düşük risk' }[y.dogru]}`);
+      actFinish(`${yerler.length} yerden ${n} tanesini doğru sınıfladın.${yanlis.length ? ' Doğrusu → ' + yanlis.join(', ') + '.' : ''} Haritada şimdi risk katmanını görüyorsun: mavi sel, kırmızı heyelan, yeşil düşük risk.`,
+        resolve, { dogru: n, toplam: yerler.length, secim, katmanKullanimi: used });
+    };
+    left.append(toggles, cv); right.appendChild(check);
+    wrap.append(left, right); body.appendChild(wrap);
+    draw();
   });
 }
 

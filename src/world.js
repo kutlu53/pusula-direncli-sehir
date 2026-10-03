@@ -475,6 +475,7 @@ export function buildWorld({ lowGfx = false } = {}) {
   scene.add(marker);
 
   const flagBase = flag.geometry.attributes.position.array.slice();
+  const devices = [];
 
   return {
     scene, colliders, buildings, sun,
@@ -482,6 +483,22 @@ export function buildWorld({ lowGfx = false } = {}) {
       marker.userData.active = !!p;
       if (p) { marker.position.set(p.x, groundHeight(p.x, p.z), p.z); piece.visible = showPiece; }
     },
+    // 3. bölümde oyuncunun yerleştirdiği cihaz: direk + renkli lamba
+    addDevice(x, z, t) {
+      const color = { sel: 0x2f7fe0, heyelan: 0xe0452f, guvenli: 0x2fa84f }[t];
+      const g = new THREE.Group(), y = groundHeight(x, z);
+      g.add(box(0.25, 4, 0.25, std(0x8f979c), 0, 2, 0));
+      if (t === 'guvenli') g.add(box(2.6, 1.6, 0.15, std(color), 0, 4.4, 0));
+      else {
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), new THREE.MeshBasicMaterial({ color }));
+        lamp.position.y = 4.3;
+        g.add(lamp, box(0.9, 0.6, 0.9, std(0xf4f1ea), 0, 3.4, 0));
+      }
+      g.position.set(x, y, z);
+      scene.add(g);
+      devices.push(g);
+    },
+    clearDevices() { devices.forEach((d) => scene.remove(d)); devices.length = 0; },
     // Işık sütunu yalnızca hedefe yaklaşınca görünür; öğrenci yönü pusulayla bulmalı
     showMarker(near) { marker.visible = !!marker.userData.active && near; },
     update(dt, t, playerPos, droneFlying = false) {

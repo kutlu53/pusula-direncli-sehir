@@ -4,9 +4,9 @@ import { buildWorld } from './world.js';
 import { Player } from './player.js';
 import { Drone } from './drone.js';
 import * as ui from './ui.js';
-import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR } from './story.js';
+import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER } from './story.js';
 import { Log } from './log.js';
-import { PLACES, M_PER_UNIT } from './terrain.js';
+import { PLACES, M_PER_UNIT, riskAt, slopeAt } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -40,7 +40,7 @@ resize();
 let mode = 'title'; // title | play | busy | map | menu | defter | end
 let state = fresh();
 function fresh() {
-  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [] };
+  return { step: 0, score: 0, correct: 0, asked: 0, time: 0, code: '', x: PLACES.start.x, z: PLACES.start.z, fotolar: [], defter: [], cihazlar: [], riskHarita: false };
 }
 const step = () => STEPS[state.step];
 const pieces = () => STEPS.slice(0, state.step).filter((s) => s.tur === 'parca').length;
@@ -48,13 +48,17 @@ const note = (b, m) => state.defter.push({ b, m });
 const log = (entry) => Log.add({ ogrenci: state.code, ...entry });
 
 function refresh() {
-  const s = step(), ch2 = s ? s.bolum === 2 : true;
+  const s = step(), bolum = s ? s.bolum : CHAPTERS.length;
   let gorev = s ? s.gorev : 'Görevler tamamlandı! Şehri özgürce gez.';
+  if (s && s.tur === 'sensor') {
+    const c = s.cihazlar[state.cihazlar.length];
+    gorev = `${c.ad}: ${c.nereye} yerleştir (${state.cihazlar.length}/${s.cihazlar.length})`;
+  }
   if (s && s.tur === 'drone') {
     gorev += ` (${state.fotolar.length}/${s.hedefler.length}). ` +
       (drone.active ? 'Hedefin üstüne gelince fotoğraf çek.' : `Drone'u uçur: ${isTouch ? '🛸 düğmesi' : 'F tuşu'}.`);
   }
-  ui.setHud({ gorev, sayac: ch2 ? `📷 ${state.fotolar.length}/3` : `🗺️ ${pieces()}/4`, puan: state.score });
+  ui.setHud({ gorev, sayac: bolum === 1 ? `🗺️ ${pieces()}/4` : bolum === 2 ? `📷 ${state.fotolar.length}/3` : `📡 ${state.cihazlar.length}/3`, puan: state.score });
   world.setTarget(s && s.hedef ? s.hedef : null, !!s && s.tur === 'parca');
   document.body.classList.toggle('has-drone', !!s && s.tur === 'drone');
   document.body.classList.toggle('drone', drone.active);
@@ -68,6 +72,9 @@ function begin(saved) {
   state = { ...fresh(), ...(saved || {}) };
   if (!saved) state.code = $('code').value.trim() || 'isimsiz';
   drone.stop();
+  world.clearDevices();
+  state.cihazlar.forEach((c) => world.addDevice(c.x, c.z, c.t));
+  mapRisk = false;
   player.place(state.x, state.z, 0);
   player.walked = 0;
   ui.showPanel('title', false); ui.showPanel('hud');
@@ -164,6 +171,8 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
 
+let mapRisk = false;
+$('map-risk').onclick = () => { mapRisk = !mapRisk; if (mode === 'map') openMap(); };
 function openMenu() { mode = 'menu'; unlock(); ui.showPanel('menu'); }
 function closeOverlay(id) { ui.showPanel(id, false); mode = 'play'; }
 function openNotebook() { mode = 'defter'; unlock(); ui.showNotebook(state.defter); }
@@ -175,8 +184,10 @@ function openMap() {
     revealed: past.filter((s) => s.acar).map((s) => s.acar),
     found: past.filter((s) => s.tur === 'parca').map((s) => s.id),
     pins: d.hedefler.filter((h) => state.fotolar.includes(h.key)),
+    risk: mapRisk && state.riskHarita, devices: state.cihazlar,
     player: drone.active ? drone.pos : player.pos, heading: player.heading,
   });
+  $('map-risk').classList.toggle('hidden', !state.riskHarita);
   ui.showPanel('map');
 }
 
@@ -209,7 +220,9 @@ function targetInfo() {
 function hint() {
   const s = step();
   if (!s) return;
-  if (s.tur === 'drone') {
+  if (s.tur === 'sensor') {
+    ui.toast('İpucu: Haritanı aç ve "Risk katmanı" düğmesine bas. Mavi alanlar sel, kırmızı alanlar heyelan, yeşil alanlar düşük riskli.', 7000);
+  } else if (s.tur === 'drone') {
     const left = s.hedefler.filter((h) => !state.fotolar.includes(h.key));
     const b = bearing(drone.active ? drone.pos : player.pos, left[0]);
     ui.toast(`İpucu: Aradığın yer: ${left[0].ipucu}. ${b.yon} yönünde, yaklaşık ${Math.round(b.dist * M_PER_UNIT / 50) * 50} metre.`, 7000);
@@ -239,6 +252,12 @@ async function runActs(s, names) {
       log({ olay: 'komsu', soru: 'B1E2', secilen: JSON.stringify(r.yanit), dogru: `${r.dogru}/${r.toplam}`, adim: s.id });
       state.score += r.dogru * 20;
       note('Ordu\'nun komşuları', KOMSU.aciklama);
+    } else if (name === 'katman') {
+      const r = await ui.layerTable(KATMAN_YERLER, world.buildings);
+      log({ olay: 'katman', soru: 'B3E1', secilen: JSON.stringify(r.secim), dogru: `${r.dogru}/${r.toplam}`, adim: s.id, metin: 'katman aç/kapat: ' + r.katmanKullanimi });
+      state.score += r.dogru * 25;
+      state.riskHarita = true;
+      note('Katmanlar (CBS)', 'Eğim ve taşkın alanı katmanlarını üst üste koyunca risk haritası ortaya çıkar: ırmak kenarı düzlükler sel, dik yamaçlar heyelan riski taşır.');
     } else if (name === 'karsilastir') {
       const r = await ui.compare(FARKLAR, world.buildings);
       log({ olay: 'karsilastir', soru: 'B2E1', secilen: r.yanlis + ' yanlış dokunuş', adim: s.id });
@@ -267,6 +286,7 @@ async function interact() {
   const s = step();
   if (!s) return;
   if (s.tur === 'drone') return photo(s);
+  if (s.tur === 'sensor') return placeDevice(s);
   const t = targetInfo();
   if (!t || t.dist > 6) return;
   mode = 'busy'; unlock(); ui.setPrompt('');
@@ -292,6 +312,27 @@ async function photo(s) {
     return;
   }
   drone.stop(); refresh();
+  await finishStep(s);
+}
+
+let deneme = 0;
+async function placeDevice(s) {
+  const c = s.cihazlar[state.cihazlar.length], p = player.pos;
+  const r = riskAt(p.x, p.z), ok = r === c.t && (c.t !== 'guvenli' || slopeAt(p.x, p.z) < 0.22);
+  log({ olay: 'cihaz', soru: 'B3C-' + c.t, secilen: r, dogru: ok ? 1 : 0, adim: s.id, metin: `${Math.round(p.x)},${Math.round(p.z)}` });
+  if (!ok) {
+    deneme++;
+    const burasi = { sel: 'sel riski taşıyan bir yer', heyelan: 'heyelan riski taşıyan bir yamaç', guvenli: 'düşük riskli bir yer', su: 'su' }[r];
+    ui.toast(`Burası ${c.t === 'guvenli' && r === 'guvenli' ? 'düşük riskli ama fazla eğimli; daha düz bir yer bul' : burasi + '. ' + c.ad + ' için ' + c.nereye + ' gitmelisin'}. Haritandaki risk katmanına bak!`, 6500);
+    return;
+  }
+  mode = 'busy'; unlock(); ui.setPrompt('');
+  world.addDevice(p.x, p.z, c.t);
+  state.cihazlar.push({ x: p.x, z: p.z, t: c.t });
+  state.score += Math.max(40, 100 - deneme * 20); deneme = 0;
+  save(); refresh();
+  await ui.dialog([['Sen', c.tamam]]);
+  if (state.cihazlar.length < s.cihazlar.length) { refresh(); mode = 'play'; return; }
   await finishStep(s);
 }
 
@@ -323,6 +364,7 @@ if (qp.has('oto')) {
   if (qp.has('harita')) openMap();
   if (qp.has('etkinlik')) { mode = 'busy'; runActs(step() || STEPS[0], [qp.get('etkinlik')]).then(() => { mode = 'play'; }); }
   if (qp.has('drone')) { drone.start(); drone.pos.set(+qp.get('x') || 0, 80, +qp.get('z') || 0); refresh(); }
+  if (qp.has('risk')) { state.riskHarita = true; mapRisk = true; openMap(); }
   if (qp.has('defter')) { note('Yön bulma', STEPS[0].soru.aciklama); openNotebook(); }
   if (qp.has('son')) showEnd(+qp.get('son'));
 }
@@ -362,7 +404,9 @@ renderer.setAnimationLoop(() => {
       state.time += dt;
       const key = isTouch ? '' : 'E — ';
       let prompt = '';
-      if (drone.active) prompt = droneTarget() ? key + '📷 Fotoğraf çek' : '';
+      const st = step();
+      if (st && st.tur === 'sensor') prompt = key + '📡 ' + st.cihazlar[state.cihazlar.length].ad + ' yerleştir';
+      else if (drone.active) prompt = droneTarget() ? key + '📷 Fotoğraf çek' : '';
       else if (ti && ti.dist < 6) prompt = key + (ti.s.tur === 'npc' ? 'Konuş' : ti.s.etiket || 'Harita parçasını al');
       ui.setPrompt(prompt);
       if ((saveTimer += dt) > 10) { saveTimer = 0; save(); }
