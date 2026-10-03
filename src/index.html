@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pusula: Dirençli Şehir</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="compass"><div id="compass-strip"></div><div id="compass-needle"></div><div id="compass-deg"></div></div>
+    <div id="quest"><div class="label">GÖREV</div><div id="quest-text"></div></div>
+    <div id="stats"><span id="pieces">🗺️ 0/4</span><span id="score">⭐ 0</span></div>
+    <div id="prompt" class="hidden"></div>
+    <div id="toast" class="hidden"></div>
+    <div id="keys">WASD yürü · Shift koş · Boşluk zıpla · Fare bak · E etkileşim · M harita · H ipucu · Esc menü</div>
+  </div>
+
+  <div id="dialog" class="hidden">
+    <div id="dialog-name"></div>
+    <div id="dialog-text"></div>
+    <div class="next">Devam etmek için tıkla veya E'ye bas ▸</div>
+  </div>
+
+  <div id="quiz" class="overlay hidden">
+    <div class="panel">
+      <div class="label" id="quiz-skill"></div>
+      <h2 id="quiz-text"></h2>
+      <div id="quiz-options"></div>
+      <div id="quiz-feedback" class="hidden"></div>
+      <button id="quiz-next" class="hidden">Devam</button>
+    </div>
+  </div>
+
+  <div id="map" class="overlay hidden">
+    <div class="panel map-panel">
+      <h2>Hasan Usta'nın Haritası</h2>
+      <canvas id="map-canvas" width="640" height="640"></canvas>
+      <div class="legend">
+        <span><i style="background:#8fc27a"></i>Alçak</span>
+        <span><i style="background:#e6d58a"></i>Orta</span>
+        <span><i style="background:#9c6b3f"></i>Yüksek</span>
+        <span><i style="background:#5aa6d6"></i>Su</span>
+        <span><i style="background:#7d7d86"></i>Yapı</span>
+        <span>Kapatmak için M</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu" class="overlay hidden">
+    <div class="panel">
+      <h2>Duraklatıldı</h2>
+      <button id="menu-resume">Devam et</button>
+      <button id="menu-csv">Araştırma verisini indir (CSV)</button>
+      <button id="menu-restart">Bölümü baştan başlat</button>
+    </div>
+  </div>
+
+  <div id="end" class="overlay hidden">
+    <div class="panel">
+      <div class="label">1. BÖLÜM TAMAMLANDI</div>
+      <h1>Kayıp Harita</h1>
+      <div class="badge">🧭<span>Harita Çırağı</span></div>
+      <p id="end-summary"></p>
+      <p class="muted">2. Bölüm: Gökten Bakış — yakında</p>
+      <button id="end-csv">Araştırma verisini indir (CSV)</button>
+      <button id="end-free">Şehri gezmeye devam et</button>
+    </div>
+  </div>
+
+  <div id="title" class="overlay">
+    <div class="panel title-panel">
+      <div class="label">ORDU · ALTINORDU</div>
+      <h1>Pusula<span>Dirençli Şehir</span></h1>
+      <p>Fırtına, Hasan Usta'nın son haritasını dört parçaya ayırdı. Pusulanı al, parçaları bul ve şehrin sırlarını keşfet.</p>
+      <label>Öğrenci kodu (isim yazma)<input id="code" maxlength="12" placeholder="örn. A07"></label>
+      <button id="start">Yeni oyun</button>
+      <button id="continue" class="hidden">Kaldığın yerden devam et</button>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
