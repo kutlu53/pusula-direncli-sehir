@@ -303,3 +303,7 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 @keyframes rise { from { transform: translate(-50%, 14px); opacity: 0; } }
 @keyframes pop { from { transform: scale(.96); opacity: 0; } }
 @media (max-height: 480px) { .logo { width: 54px; height: 54px; } }
+
+/* Kısa ekranda etkileşim kutusu ortayı kapatmasın; drone etiketi joystick altında kalmasın */
+@media (max-height: 480px) { .touch #prompt { bottom: 58px; } }
+.touch #viewfinder span { left: auto; right: 12px; bottom: auto; top: 8px; }

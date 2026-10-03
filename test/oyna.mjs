@@ -11,14 +11,19 @@ const report = { hatalar: [], adimlar: [], notlar: [] };
 let reloaded = false;
 const note = (m) => { report.notlar.push(m); console.log('  ·', m); };
 
+// DOKUNMATIK=1: oyun telefon boyutunda, yalnızca dokunma girdisiyle (joystick, düğmeler, dokunuşlar) oynanır
+const TOUCH = !!process.env.DOKUNMATIK;
 const browser = await puppeteer.launch({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new',
   args: ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11', '--window-size=640,400', '--allow-file-access-from-files'],
-  defaultViewport: { width: 640, height: 400 },
+  defaultViewport: TOUCH ? { width: 844, height: 390, hasTouch: true, isMobile: true } : { width: 640, height: 400 },
 });
 const page = await browser.newPage();
 page.on('pageerror', (e) => { report.hatalar.push('pageerror: ' + e.message); console.log('!! HATA', e.message); });
 page.on('console', (m) => { if (m.type() === 'error') { report.hatalar.push('console: ' + m.text()); console.log('!! console', m.text()); } });
+if (TOUCH) { // bütün tıklamalar dokunuş olsun
+  page.click = (sel) => page.tap(sel);
+}
 await page.goto(URL);
 await page.evaluate(() => localStorage.clear());
 await page.reload();
@@ -34,6 +39,22 @@ const vis = (sel) => page.evaluate((q) => { const e = document.querySelector(q);
 const text = (sel) => page.evaluate((q) => document.querySelector(q)?.textContent || '', sel);
 const shot = (name) => page.screenshot({ path: `${OUT}/bot_${name}.png` });
 const setHeading = (h) => page.evaluate((v) => { window.__oyun.player.heading = v; }, h);
+if (TOUCH) { const proto = Object.getPrototypeOf(await page.$('body')); proto.click = function () { return this.tap(); }; }
+let joyTouch = null;
+// İleri (ya da geri) git: klavyede W+Shift, dokunmatikte joystick sonuna kadar itilir
+async function fwd(on, back = false) {
+  if (!TOUCH) {
+    const k = back ? 'KeyS' : 'KeyW';
+    if (on) { await page.keyboard.down(k); if (!back) await page.keyboard.down('ShiftLeft'); } else { await page.keyboard.up('KeyW'); await page.keyboard.up('KeyS'); await page.keyboard.up('ShiftLeft'); }
+    return;
+  }
+  if (on) {
+    const b = await (await page.$('#joy')).boundingBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    joyTouch = await page.touchscreen.touchStart(cx, cy);
+    await joyTouch.move(cx, cy + (back ? 60 : -60));
+  } else if (joyTouch) { await joyTouch.end(); joyTouch = null; }
+}
+const act = async () => { if (!TOUCH) return page.keyboard.press('KeyE'); if (await vis('#prompt')) await page.tap('#prompt'); };
 const clickText = async (sel, t) => {
   const ok = await page.evaluate((q, tt) => { const e = [...document.querySelectorAll(q)].find((b) => b.textContent.trim().includes(tt) && b.getClientRects().length > 0); if (!e) return false; e.scrollIntoView({ block: 'center' }); return true; }, sel, t);
   if (!ok) throw new Error(`bulunamadı: ${sel} "${t}"`);
@@ -44,7 +65,7 @@ const clickCanvas = async (sel, fx, fy) => {
   const h = await page.$(sel);
   await h.evaluate((e) => e.scrollIntoView({ block: 'center' }));
   const b = await h.boundingBox();
-  await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
+  if (TOUCH) await page.touchscreen.tap(b.x + b.width * fx, b.y + b.height * fy); else await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
 };
 
 // ---- fps ölçümü
@@ -73,7 +94,7 @@ let stuckTotal = 0;
 async function walkTo(t, radius = 4, limitS = 240, until = null) {
   const t0 = Date.now();
   let last = await G(), lastT = Date.now(), detourUntil = 0, side = 1, stuck = 0;
-  await page.keyboard.down('KeyW'); await page.keyboard.down('ShiftLeft');
+  await fwd(true);
   try {
     while (true) {
       const s = await G();
@@ -91,7 +112,7 @@ async function walkTo(t, radius = 4, limitS = 240, until = null) {
       }
       await sleep(110);
     }
-  } finally { await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); }
+  } finally { await fwd(false); }
 }
 
 // Hedef ırmağın öbür yakasındaysa önce köprüden geç (bir oyuncunun yapacağı gibi)
@@ -268,13 +289,14 @@ async function handleBusy() {
     if (++guard > 400) throw new Error('busy modunda takıldı');
     if (await vis('#quiz')) await answerQuiz();
     else if (await vis('#activity')) { if (await vis('#act-next')) await page.click('#act-next'); else await doActivity(); }
-    else if (await vis('#dialog')) { if (guard % 2) await page.click('#dialog'); else await page.keyboard.press('KeyE'); }
+    else if (await vis('#dialog')) { if (guard % 2 || TOUCH) await page.click('#dialog'); else await page.keyboard.press('KeyE'); }
     await sleep(160);
   }
 }
 
 // ---- Yardımcı ekranlar: harita, defter, ipucu, menü
 async function testOverlays(tag) {
+  if (TOUCH) return; // dokunmatik düğmeler test/dokunmatik.mjs içinde sınanıyor
   await page.keyboard.press('KeyM'); await sleep(300);
   if (!(await vis('#map'))) report.hatalar.push(tag + ': M ile harita açılmadı');
   await shot('harita_' + tag);
@@ -320,7 +342,7 @@ while (true) {
 
   if (['npc', 'parca', 'nesne'].includes(s.tur)) {
     if (s.step === 0) { // hedefe varmadan E'ye basmak bir şey yapmamalı
-      await page.keyboard.press('KeyE'); await sleep(200);
+      await act(); await sleep(200);
       if ((await G()).mode !== 'play') report.hatalar.push('Uzakken E etkileşimi başlattı');
     }
     const r = await go(s.hedef, 4.5);
@@ -328,7 +350,7 @@ while (true) {
     await sleep(300);
     if (!(await vis('#prompt'))) report.hatalar.push(`${s.id}: hedefe varınca etkileşim kutusu görünmedi`);
     await shot('varis_' + s.id);
-    await page.keyboard.press('KeyE'); await sleep(250);
+    await act(); await sleep(250);
     await handleBusy();
     report.adimlar.push({ id: s.id, yurume_sn: +r.sure.toFixed(0), takilma: r.stuck });
     if (s.step === 1 || s.step === 9 || s.step === 11) await testOverlays('adim' + s.step);
@@ -341,19 +363,21 @@ while (true) {
       await sleep(300);
       if (!(await vis('#prompt'))) report.hatalar.push('Tahliye: uyarma kutusu görünmedi');
       await shot('tahliye_' + Math.round(g0.hedef.x));
-      await page.keyboard.press('KeyE'); await sleep(250);
+      await act(); await sleep(250);
       await handleBusy();
       note(`Aile uyarıldı (${r.sure.toFixed(0)} sn yürüme, ${r.stuck} takılma), sayaç: ${await text('#pieces')}`);
     }
     report.adimlar.push({ id: s.id, sure_sn: +((Date.now() - st0) / 1000).toFixed(0) });
   } else if (s.tur === 'drone') {
     const H = await page.evaluate(() => window.__oyun.STEPS[window.__oyun.state.step].hedefler.map((h) => ({ key: h.key, x: h.x, z: h.z })));
-    await page.keyboard.press('KeyF'); await sleep(400);
+    if (TOUCH) await page.tap('#t-drone'); else await page.keyboard.press('KeyF');
+    await sleep(400);
     if (!(await G()).droneOn) throw new Error('F ile drone kalkmadı');
-    await page.keyboard.press('KeyH'); await sleep(200); note('Drone ipucu: ' + (await text('#toast')).slice(0, 90));
+    if (TOUCH) await page.tap('#t-hint'); else await page.keyboard.press('KeyH');
+    await sleep(200); note('Drone ipucu: ' + (await text('#toast')).slice(0, 90));
     for (const h of H) {
       const t1 = Date.now();
-      await page.keyboard.down('KeyW');
+      await fwd(true);
       while (true) {
         const d = await G(), dist = Math.hypot(h.x - d.dx, h.z - d.dz);
         await setHeading(Math.atan2(h.x - d.dx, -(h.z - d.dz)));
@@ -361,21 +385,21 @@ while (true) {
         if (Date.now() - t1 > 120000) throw new Error('Drone hedefe ulaşamadı: ' + h.key);
         await sleep(100);
       }
-      await page.keyboard.up('KeyW'); await sleep(900);
+      await fwd(false); await sleep(900);
       if (!(await vis('#prompt'))) { // biraz ileri-geri ayarla
         const d = await G(), dist = Math.hypot(h.x - d.dx, h.z - d.dz);
-        await page.keyboard.down(dist > 52 ? 'KeyW' : 'KeyS'); await sleep(500); await page.keyboard.up(dist > 52 ? 'KeyW' : 'KeyS'); await sleep(600);
+        await fwd(true, dist <= 52); await sleep(500); await fwd(false); await sleep(600);
       }
       if (!(await vis('#prompt'))) { await shot('drone_yok_' + h.key); throw new Error('Drone hedef üstünde ama fotoğraf kutusu çıkmadı: ' + h.key); }
       await shot('drone_' + h.key);
-      await page.keyboard.press('KeyE'); await sleep(300);
+      await act(); await sleep(300);
       await handleBusy();
       note(`Drone fotoğrafı: ${h.key} (${((Date.now() - t1) / 1000).toFixed(0)} sn)`);
     }
     report.adimlar.push({ id: s.id, sure_sn: +((Date.now() - st0) / 1000).toFixed(0) });
   } else if (s.tur === 'sensor') {
     // önce yanlış yerde dene: uyarı çıkmalı, cihaz konmamalı
-    await page.keyboard.press('KeyE'); await sleep(300);
+    await act(); await sleep(300);
     const w = await text('#toast');
     if ((await G()).cih !== 0 || !w.includes('Burası')) report.hatalar.push('Sensör: yanlış yerde uyarı beklenirdi, gelen: ' + w.slice(0, 50));
     else note('Yanlış yerde cihaz uyarısı: "' + w.slice(0, 80) + '…"');
@@ -385,7 +409,7 @@ while (true) {
       const r = await go(C[t], 3, 240, t === 'guvenli' ? null : (p) => ok(p));
       if (!r.ok) throw new Error('Sensör yeri bulunamadı: ' + t);
       await sleep(200);
-      await page.keyboard.press('KeyE'); await sleep(300);
+      await act(); await sleep(300);
       await handleBusy();
       note(`Cihaz yerleştirildi: ${t} (${r.sure.toFixed(0)} sn yürüme, ${r.stuck} takılma)`);
     }
