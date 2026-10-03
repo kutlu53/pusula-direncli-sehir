@@ -325,8 +325,11 @@ function buildLandmarks(scene, colliders) {
   const K = PLACES.kopru, segN = 20, segW = (BRIDGE_HALF * 2) / segN;
   for (let i = 0; i < segN; i++) {
     const x = K.x - BRIDGE_HALF + (i + 0.5) * segW, y = bridgeDeck(x);
-    scene.add(box(segW + 0.1, 0.5, 8, stone, x, y - 0.25, BRIDGE_Z));
-    for (const sz of [-3.8, 3.8]) scene.add(box(segW + 0.1, 0.9, 0.3, white, x, y + 0.45, BRIDGE_Z + sz));
+    const ang = Math.atan(bridgeDeck(x + 0.5) - bridgeDeck(x - 0.5)), len = segW / Math.cos(ang) + 0.12;
+    const deck = box(len, 0.5, 8, stone, x, y - 0.25, BRIDGE_Z);
+    deck.rotation.z = ang;
+    scene.add(deck);
+    for (const sz of [-3.8, 3.8]) { const rail = box(len, 0.9, 0.3, white, x, y + 0.45, BRIDGE_Z + sz); rail.rotation.z = ang; scene.add(rail); }
   }
   for (const dx of [-12, 12]) scene.add(box(2.5, 6, 7, stone, K.x + dx, -0.5, BRIDGE_Z));
 
@@ -458,6 +461,45 @@ export function buildWorld({ lowGfx = false } = {}) {
   const clouds = buildClouds(scene);
   const boats = buildBoats(scene);
 
+  // Martılar: kıyının üstünde daireler çizer
+  const gulls = [];
+  const wingGeo = new THREE.PlaneGeometry(1.5, 0.45).translate(0.75, 0, 0), gullMat = new THREE.MeshBasicMaterial({ color: 0xfafafa, side: THREE.DoubleSide });
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.Group(), l = new THREE.Mesh(wingGeo, gullMat), r = new THREE.Mesh(wingGeo, gullMat);
+    l.rotation.x = r.rotation.x = -Math.PI / 2; r.scale.x = -1;
+    g.add(l, r, box(0.25, 0.2, 0.8, std(0xe8e8e8), 0, 0, 0));
+    g.userData = { l, r, rad: 50 + rand(i, 91) * 110, h: 22 + rand(i, 92) * 22, sp: 0.12 + rand(i, 93) * 0.1, ph: rand(i, 94) * 6.28 };
+    scene.add(g); gulls.push(g);
+  }
+
+  // Sahil yolu lambaları ve Hasan Usta'nın minibüsü
+  const lampXs = [];
+  for (let x = -300; x <= 400; x += 28) lampXs.push(x);
+  const poles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.14, 6, 6).translate(0, 3, 0), std(0x4a5258), lampXs.length);
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.42, 10, 8).translate(0, 6.2, 0), new THREE.MeshBasicMaterial({ color: 0xfff0b8 }), lampXs.length);
+  const lm = new THREE.Matrix4();
+  lampXs.forEach((x, i) => { const z = coastZ(x) + 18; lm.makeTranslation(x, terrainHeight(x, z), z); poles.setMatrixAt(i, lm); bulbs.setMatrixAt(i, lm); });
+  scene.add(shadowed(poles), bulbs);
+  const bus = new THREE.Group(), bx = PIER.x + 10, bz = PIER.z1 + 9;
+  bus.add(box(3, 2.4, 7, std(0xf2e6d0), 0, 1.9, 0), box(3.05, 0.5, 7.05, std(0xc2452f), 0, 1.3, 0), box(2.7, 0.9, 5.4, std(0x4a6278), 0, 2.45, -0.3));
+  for (const [wx, wz] of [[-1.5, -2.3], [1.5, -2.3], [-1.5, 2.3], [1.5, 2.3]]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 12).rotateZ(Math.PI / 2), std(0x22262b));
+    w.position.set(wx, 0.55, wz); bus.add(w);
+  }
+  bus.position.set(bx, terrainHeight(bx, bz), bz); bus.rotation.y = 0.5;
+  scene.add(bus);
+
+  // Toplanan harita parçasında ve başarılarda saçılan kıvılcımlar
+  const SP = 40, spPos = new Float32Array(SP * 3), spVel = [];
+  const spGeo = new THREE.BufferGeometry();
+  spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
+  const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ color: 0xffd866, size: 0.55, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  sparks.visible = false; sparks.frustumCulled = false;
+  scene.add(sparks);
+  let sparkLife = 0;
+  const people = [];
+  let peopleKey = '';
+
   // Hasan Usta
   const usta = makeCharacter({ shirt: 0x7a5a3a, pants: 0x3d4654, hair: 0xd8d8d8 });
   usta.position.set(PLACES.iskele.x, PIER.y, PLACES.iskele.z);
@@ -537,6 +579,37 @@ export function buildWorld({ lowGfx = false } = {}) {
       devices.push(g);
     },
     clearDevices() { devices.forEach((d) => scene.remove(d)); devices.length = 0; },
+    burst(x, z) {
+      const y = groundHeight(x, z) + 2;
+      for (let i = 0; i < SP; i++) {
+        spPos.set([x, y, z], i * 3);
+        const a = rand(i, 95) * 6.28, up = 5 + rand(i, 96) * 9, out = 2 + rand(i, 97) * 6;
+        spVel[i] = [Math.cos(a) * out, up, Math.sin(a) * out];
+      }
+      sparkLife = 1.2; sparks.visible = true;
+    },
+    // Karakterleri hikâyeye göre yerleştir
+    placeNPC(kim, x, z) {
+      const m = { usta, elif, kemal }[kim];
+      if (Math.hypot(m.position.x - x, m.position.z - z) > 0.5) m.position.set(x, groundHeight(x, z), z);
+    },
+    // Aile ve kalabalık grupları: [{ x, z, n }]
+    setPeople(groups) {
+      const key = JSON.stringify(groups);
+      if (key === peopleKey) return;
+      peopleKey = key;
+      people.forEach((p) => scene.remove(p)); people.length = 0;
+      const shirts = [0xc94f3a, 0x2f6f9f, 0xe0a52f, 0x7a5ac0, 0x3f9a4a, 0xd97aa0], hairs = [0x2a1a12, 0x4a2f1e, 0x1c1c1c, 0xb9b9b9];
+      let k = 0;
+      for (const gr of groups) for (let i = 0; i < gr.n; i++, k++) {
+        const p = makeCharacter({ shirt: shirts[k % 6], pants: 0x3d4654, hair: hairs[k % 4] });
+        const a = (i / gr.n) * 6.28, r = 2 + (i % 2) * 1.6, x = gr.x + Math.cos(a) * r, z = gr.z + Math.sin(a) * r;
+        p.scale.setScalar(i % 3 === 2 ? 0.6 : 0.82); // her üç kişiden biri çocuk
+        p.position.set(x, groundHeight(x, z), z);
+        p.rotation.y = rand(k, 98) * 6.28;
+        scene.add(p); people.push(p);
+      }
+    },
     setStorm(level) { stormTarget = level; }, // 0 = açık hava, 1 = en şiddetli
     // 5. bölümde oyuncunun planladığı yapılar dünyaya kurulur
     buildPlan(plan) {
@@ -617,6 +690,32 @@ export function buildWorld({ lowGfx = false } = {}) {
       });
       clouds.forEach((c) => { c.position.x += dt * 2.2; if (c.position.x > 1300) c.position.x = -1300; });
       boats.forEach((b, i) => { b.position.y = Math.sin(t * 1.2 + i * 2) * 0.18; b.rotation.z = Math.sin(t * 0.9 + i) * 0.05; });
+      gulls.forEach((g) => {
+        const u = g.userData, a = t * u.sp + u.ph;
+        g.position.set(30 + Math.cos(a) * u.rad, u.h + Math.sin(t * 0.7 + u.ph) * 2, -90 + Math.sin(a) * u.rad * 0.6);
+        g.rotation.y = -a;
+        u.l.rotation.y = Math.sin(t * 7 + u.ph) * 0.5; u.r.rotation.y = -u.l.rotation.y;
+      });
+      // Karakterler hafifçe kıpırdar ve yakındaki oyuncuya döner
+      for (const [i, m] of [usta, elif, kemal, ...people].entries()) {
+        animateCharacter(m, t * 1.6 + i, 0.07);
+        const dx = playerPos.x - m.position.x, dz = playerPos.z - m.position.z;
+        if (dx * dx + dz * dz < 500) {
+          let d = -Math.atan2(dx, -dz) - m.rotation.y;
+          d = Math.atan2(Math.sin(d), Math.cos(d));
+          m.rotation.y += d * Math.min(1, dt * 4);
+        }
+      }
+      if (sparkLife > 0) {
+        sparkLife -= dt;
+        for (let i = 0; i < SP; i++) {
+          const v = spVel[i]; v[1] -= 14 * dt;
+          spPos[i * 3] += v[0] * dt; spPos[i * 3 + 1] += v[1] * dt; spPos[i * 3 + 2] += v[2] * dt;
+        }
+        spGeo.attributes.position.needsUpdate = true;
+        sparks.material.opacity = Math.max(0, sparkLife / 1.2);
+        if (sparkLife <= 0) sparks.visible = false;
+      }
       const fp = flag.geometry.attributes.position;
       for (let i = 0; i < fp.count; i++) {
         const x = flagBase[i * 3];

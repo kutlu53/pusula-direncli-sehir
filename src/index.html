@@ -8,11 +8,12 @@
 </head>
 <body>
   <canvas id="game"></canvas>
+  <div id="vignette"></div>
 
   <div id="hud" class="hidden">
     <div id="compass"><div id="compass-strip"></div><div id="compass-needle"></div><div id="compass-deg"></div></div>
     <div id="quest"><div class="label">GÖREV</div><div id="quest-text"></div></div>
-    <div id="stats"><span id="pieces">🗺️ 0/4</span><span id="score">⭐ 0</span></div>
+    <div id="stats"><span id="pieces">🗺️ 0/4</span><span id="score">⭐ 0</span><button id="mute" aria-label="Ses">🔊</button></div>
     <button id="prompt" class="hidden"></button>
     <div id="toast" class="hidden"></div>
     <div id="touch">
@@ -106,6 +107,7 @@
   <div id="title" class="overlay">
     <div class="panel title-panel">
       <div class="label">ORDU · ALTINORDU</div>
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#f6efdc" stroke="#0c5a5c" stroke-width="4"/><circle cx="32" cy="32" r="22" fill="none" stroke="#e0a52f" stroke-width="1.5" stroke-dasharray="2 5"/><g class="needle"><polygon points="32,8 38,32 26,32" fill="#c2452f"/><polygon points="32,56 38,32 26,32" fill="#17313a"/></g><circle cx="32" cy="32" r="3.5" fill="#e0a52f"/></svg>
       <h1>Pusula<span>Dirençli Şehir</span></h1>
       <p>Fırtına, Hasan Usta'nın son haritasını dört parçaya ayırdı. Pusulanı al, parçaları bul, sonra drone ile şehrin riskli yerlerini gökyüzünden keşfet.</p>
       <label>Öğrenci kodu (isim yazma)<input id="code" maxlength="12" placeholder="örn. A07"></label>

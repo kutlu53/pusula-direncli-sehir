@@ -393,7 +393,7 @@ export const STEPS = [
     id: 'toplanma', bolum: 6, tur: 'nesne', hedefCihaz: 2, etiket: 'Yoklama al', firtina: 1,
     gorev: 'Toplanma alanına git ve yoklama al (haritada yeşil kare)',
     once: [
-      ['Elif Abla (telsiz)', 'Yoklama tamam: ırmak kenarından ve yamaçtan gelen bütün aileler toplanma alanında. Herkes güvende!'],
+      ['Elif Abla', 'Yoklama tamam: ırmak kenarından ve yamaçtan gelen bütün aileler toplanma alanında. Herkes güvende!'],
       ['Kemal Bey (telsiz)', 'Irmak taştı ama taşkın parkı suyu tuttu. Yeni okul ve hastane kupkuru. İyi ki o yamaca yeni ev yapmamışım...'],
       ['Hasan Usta (telsiz)', 'Sensörün haber verdi, haritan yol gösterdi, planın korudu. Bir şehri dirençli yapan işte budur.'],
     ],
@@ -409,11 +409,11 @@ export const STEPS = [
       aciklama: 'Yağmur dursa da su çekilmemiş, yamaç hâlâ ıslak ve binalar zarar görmüş olabilir. AFAD ve yetkililer kontrol edip güvenli diyene kadar riskli yere dönülmez.',
     },
     sonra: [
-      ['Elif Abla (telsiz)', 'Son bir iş kaldı, belki de en önemlisi: bildiklerini başkalarına da öğretmek. Şehir için bir afet farkındalık afişi hazırlar mısın?'],
+      ['Elif Abla', 'Son bir iş kaldı, belki de en önemlisi: bildiklerini başkalarına da öğretmek. Şehir için bir afet farkındalık afişi hazırlar mısın?'],
     ],
     etkinlikler: ['afis'],
     kapanis: [
-      ['Elif Abla (telsiz)', 'Afişin harika! Onu okuluna ve mahallene asabilirsin. Bugünden sonra sen de bir afet gönüllüsüsün.'],
+      ['Elif Abla', 'Afişin harika! Onu okuluna ve mahallene asabilirsin. Bugünden sonra sen de bir afet gönüllüsüsün.'],
       ['Hasan Usta (telsiz)', 'Altınordu artık hazır. Ama Ordu\'nun on dokuz ilçesi var, kâşif: Ünye, Fatsa, Gölköy, Aybastı... Onların da bir haritacıya ihtiyacı var.'],
     ],
     bolumSonu: 6,

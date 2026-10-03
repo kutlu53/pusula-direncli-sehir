@@ -6,7 +6,8 @@ import { Drone } from './drone.js';
 import * as ui from './ui.js';
 import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS, ILCELER } from './story.js';
 import { Log } from './log.js';
-import { PLACES, M_PER_UNIT, riskAt, slopeAt } from './terrain.js';
+import { Sfx } from './audio.js';
+import { PLACES, M_PER_UNIT, riskAt, slopeAt, coastZ } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -77,6 +78,20 @@ function refresh() {
   world.setTarget(hedefOf(s), !!s && s.tur === 'parca');
   document.body.classList.toggle('has-drone', !!s && s.tur === 'drone');
   document.body.classList.toggle('drone', drone.active);
+  // Karakterler ve kalabalık hikâyenin neresindeysek orada durur
+  const idx = (id) => STEPS.findIndex((x) => x.id === id);
+  const okul = state.plan && state.step >= idx('temel') ? state.plan.okul : null;
+  world.placeNPC('kemal', okul ? okul.x - 9 : PLACES.kemal.x, okul ? okul.z + 8 : PLACES.kemal.z);
+  const alan = state.cihazlar[2];
+  const elifAlanda = alan && s && s.id === 'toplanma';
+  world.placeNPC('elif', elifAlanda ? alan.x + 3 : PLACES.afad.x, elifAlanda ? alan.z - 3 : PLACES.afad.z);
+  const gruplar = [];
+  if (s && s.bolum === 6 && alan) {
+    const aileler = STEPS[idx('tahliye')].hedefler;
+    for (const h of aileler) if (!state.uyarilan.includes(h.key)) gruplar.push({ x: h.x + 4, z: h.z + 4, n: 4 });
+    if (state.uyarilan.length) gruplar.push({ x: alan.x - 5, z: alan.z + 5, n: 4 * state.uyarilan.length });
+  }
+  world.setPeople(gruplar);
 }
 function save() {
   state.x = player.pos.x; state.z = player.pos.z; state.walked = player.walked;
@@ -320,8 +335,10 @@ async function finishStep(s) {
   if (s.sonra) await ui.dialog(s.sonra);
   if (s.etkinlikler) await runActs(s, s.etkinlikler);
   if (s.kapanis) await ui.dialog(s.kapanis);
+  if (s.tur === 'parca') { Sfx.pickup(); world.burst(s.hedef.x, s.hedef.z); }
   state.step++;
   save(); refresh();
+  if (STEPS[state.step] && STEPS[state.step].id === 'alarm') Sfx.alarm();
   if (s.bolumSonu) showEnd(s.bolumSonu); else mode = 'play';
 }
 
@@ -349,7 +366,7 @@ async function photo(s) {
   const h = droneTarget();
   if (!h) return;
   mode = 'busy'; unlock(); ui.setPrompt('');
-  ui.flash();
+  ui.flash(); Sfx.shutter();
   log({ olay: 'fotograf', adim: h.key });
   await ui.dialog([['Sen', `Fotoğraf çekildi: ${h.ad}.`]]);
   await ask(s, h.soru);
@@ -414,6 +431,7 @@ async function placeDevice(s) {
 
 function showEnd(no) {
   mode = 'end';
+  Sfx.fanfare();
   const ch = CHAPTERS[no - 1], sonraki = step() ? CHAPTERS[no] : null;
   log({ olay: 'bolum_bitti', soru: 'B' + no, sure_sn: Math.round(state.time), secilen: state.score + ' puan' });
   ui.showEnd({
@@ -423,8 +441,12 @@ function showEnd(no) {
   });
 }
 
-$('start').onclick = () => begin(null);
-$('continue').onclick = () => begin(Log.load());
+$('start').onclick = () => { Sfx.init(); begin(null); };
+$('continue').onclick = () => { Sfx.init(); begin(Log.load()); };
+const muteBtn = $('mute');
+muteBtn.textContent = Sfx.muted ? '🔇' : '🔊';
+muteBtn.onclick = () => { Sfx.init(); muteBtn.textContent = Sfx.toggle() ? '🔇' : '🔊'; };
+addEventListener('click', (e) => { if (e.target.closest('button')) Sfx.click(); }, true);
 $('menu-resume').onclick = () => closeOverlay('menu');
 $('menu-csv').onclick = $('end-csv').onclick = () => Log.download();
 $('menu-restart').onclick = () => { Log.clearSave(); ui.showPanel('menu', false); begin(null); };
@@ -457,6 +479,7 @@ if (qp.has('oto')) {
 
 // ---------- Döngü ----------
 const clock = new THREE.Clock();
+let sonAdim = 0;
 let titleAngle = 0, saveTimer = 0, fpsTime = 0, fpsFrames = 0;
 // Cihaz zorlanıyorsa önce çözünürlüğü, sonra gölgeleri düşür
 function adaptQuality(rawDt) {
@@ -484,6 +507,11 @@ renderer.setAnimationLoop(() => {
     if (drone.active) drone.update(dt, playing ? keys : {});
     world.update(dt, t, drone.active ? drone.focus : player.pos, drone.active, camera.position);
     ui.updateCompass(player.headingDeg);
+    // Ortam sesleri: kıyıya yakınken deniz, fırtınada yağmur; adım sesleri
+    const st0 = step(), kiyi = Math.max(0, 1 - Math.abs(player.pos.z - coastZ(player.pos.x)) / 140);
+    Sfx.frame(t, dt, { deniz: 0.25 + 0.75 * kiyi, yagmur: (st0 && st0.firtina) || 0, drone: drone.active });
+    const adim = Math.floor(player.stride / Math.PI);
+    if (adim !== sonAdim) { sonAdim = adim; if (player.moving > 0.5 && player.onGround && !drone.active) Sfx.step(adim % 2); }
     const ti = targetInfo();
     world.showMarker(!!ti && (ti.s.tur !== 'parca' || ti.dist < 120));
     if (playing) {

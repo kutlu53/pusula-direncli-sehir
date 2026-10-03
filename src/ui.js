@@ -1,5 +1,7 @@
 import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, RISKS, riverX, coastZ, fbm, slopeAt, riskAt } from './terrain.js';
 
+import { Sfx } from './audio.js';
+
 const $ = (id) => document.getElementById(id);
 const show = (el, on = true) => el.classList.toggle('hidden', !on);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -58,7 +60,7 @@ export const dialogAdvance = () => advance && advance();
 export function dialog(lines) {
   return new Promise((resolve) => {
     let i = 0;
-    const render = () => { $('dialog-name').textContent = lines[i][0]; $('dialog-text').textContent = lines[i][1]; };
+    const render = () => { $('dialog-name').textContent = lines[i][0]; $('dialog-text').textContent = lines[i][1]; Sfx.talk(); };
     advance = () => {
       if (++i < lines.length) return render();
       advance = null;
@@ -88,6 +90,7 @@ export function quiz(q) {
         result = { secilen: text, dogru, sure: Math.round((performance.now() - started) / 100) / 10 };
         [...box.children].forEach((c, j) => { c.disabled = true; if (j === q.dogru) c.classList.add('right'); });
         if (!dogru) b.classList.add('wrong');
+        dogru ? Sfx.right() : Sfx.wrong();
         $('quiz-feedback').textContent = (dogru ? '✅ Doğru! ' : '❌ Bu sefer olmadı. ') + q.aciklama;
         show($('quiz-feedback')); show($('quiz-next'));
       };
@@ -244,6 +247,7 @@ function actOpen(title, intro) {
   return body;
 }
 function actFinish(text, resolve, value) {
+  Sfx.pickup();
   $('act-feedback').textContent = text;
   show($('act-feedback')); show($('act-next'));
   $('act-next').onclick = () => { show($('activity'), false); resolve(value); };

@@ -289,3 +289,17 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 /* ---------- 7. bölüm: il haritası ---------- */
 .ilce-canvas { width: min(100%, 70vh) !important; cursor: pointer !important; }
 @media (max-height: 480px) { .ilce-canvas { width: min(100%, 78vh) !important; } }
+
+/* ---------- Görsel cila ---------- */
+#vignette { position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(8, 28, 38, .34) 100%); }
+#mute { pointer-events: auto; width: auto; margin: 0 0 0 2px; padding: 0 2px; background: none; font-size: 17px; line-height: 1; }
+#mute:hover { background: none; transform: scale(1.15); }
+.logo { float: right; width: 84px; height: 84px; margin: -4px 0 0 12px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .25)); }
+.logo .needle { transform-origin: 32px 32px; animation: needle 5s ease-in-out infinite; }
+@keyframes needle { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(16deg); } }
+#dialog { animation: rise .18s ease-out; }
+.overlay > .panel { animation: pop .2s ease-out; }
+@keyframes rise { from { transform: translate(-50%, 14px); opacity: 0; } }
+@keyframes pop { from { transform: scale(.96); opacity: 0; } }
+@media (max-height: 480px) { .logo { width: 54px; height: 54px; } }

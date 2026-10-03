@@ -24,6 +24,7 @@ export class Player {
     this.pos.set(x, groundHeight(x, z), z);
     this.heading = heading;
     this.model.rotation.y = -heading;
+    this.snap = true; // kamera yeni yere anında geçsin
   }
 
   look(dx, dy) {
@@ -86,7 +87,13 @@ export class Player {
     const cp = Math.cos(this.pitch), d = this.dist;
     const cx = p.x - sin * cp * d, cz = p.z + cos * cp * d;
     const cy = Math.max(p.y + 2 + Math.sin(this.pitch) * d, groundHeight(cx, cz) + 2.6);
-    this.camera.position.set(cx, cy, cz);
+    if (!this.cam) this.cam = new THREE.Vector3();
+    this.target = this.target || new THREE.Vector3();
+    this.target.set(cx, cy, cz);
+    if (this.snap) { this.cam.copy(this.target); this.snap = false; } else this.cam.lerp(this.target, 1 - Math.exp(-dt * 14));
+    this.cam.y = Math.max(this.cam.y, groundHeight(this.cam.x, this.cam.z) + 1.6);
+    this.camera.position.copy(this.cam);
     this.camera.lookAt(p.x, p.y + 2.2, p.z);
+    this.onGround = onGround;
   }
 }
