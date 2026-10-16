@@ -164,6 +164,8 @@ export const STEPS = [
         ], dogru: 1,
         aciklama: 'Atlas Okyanusu batıda Kuzey ve Güney Amerika, doğuda Avrupa ve Afrika arasındadır. Türkiye\'ye en yakın okyanus da Atlas Okyanusu\'dur; Akdeniz ona Cebelitarık Boğazı\'yla bağlanır.',
       } },
+      { diyalog: [['Hasan Usta (telsiz)', 'Haritaya bir daha bak: kıtalar ve okyanuslar birbirinin komşusudur. Hangisi kimin batısında, kimin arasında? Defterine yaz.']] },
+      { etkinlik: 'ozetKita' },
       { diyalog: [
         ['Hasan Usta (telsiz)', 'Buraya kadar hep "kuzeyinde, batısında" dedik; bu göreceli konumdu. Peki uzaydaki bir uydu Ordu\'yu nasıl bulur? Sayılarla!'],
         ['Hasan Usta (telsiz)', 'Dünyanın üzerinde çizgiler düşün. Ekvator\'a paralel çizgilere PARALEL denir, sayısına ENLEM. Kutuplardan geçen çizgilere MERİDYEN denir, sayısına BOYLAM.'],
@@ -832,6 +834,21 @@ export const KOORDINAT = {
     { metin: 'Şimdi ORDU\'ya dokun ve koordinatını oku', k: [37.88, 40.985], etiket: '41° K, 38° D', sonuc: 'Ordu yaklaşık 41° K enlemi ile 38° D boylamındadır.', ipucu: 'Kırmızı nokta Ordu; Karadeniz kıyısının ortasında.' },
   ],
   bitis: 'Türkiye 36° - 42° kuzey paralelleri ile 26° - 45° doğu meridyenleri arasındadır. Bu sayılar ülkemizin mutlak konumudur; dünyanın her yeri için böyle iki sayı vardır.',
+};
+
+CLOZE.ozetKita = {
+  baslik: 'Kıtaların ve okyanusların komşuluğunu özetle',
+  defter: 'Kıtalar ve okyanuslar nerede?',
+  kazanim: 'SB.6.2.1c',
+  parcalar: [
+    'Avrupa, Asya\'nın ', { sec: ['batısında', 'doğusunda', 'güneyinde'], dogru: 'batısında' }, '; Afrika ise Avrupa\'nın ',
+    { sec: ['kuzeyinde', 'güneyinde', 'doğusunda'], dogru: 'güneyinde' }, ' yer alır. Asya\'nın doğusunda ',
+    { sec: ['Atlas Okyanusu', 'Büyük Okyanus', 'Hint Okyanusu'], dogru: 'Büyük Okyanus' }, ', güneyinde ',
+    { sec: ['Hint Okyanusu', 'Kuzey Buz Denizi', 'Atlas Okyanusu'], dogru: 'Hint Okyanusu' }, ' vardır. Afrika ile Güney Amerika\'nın arasında ',
+    { sec: ['Büyük Okyanus', 'Atlas Okyanusu', 'Güney Okyanusu'], dogru: 'Atlas Okyanusu' }, ', en güneyde Antarktika\'nın çevresinde ',
+    { sec: ['Güney Okyanusu', 'Kuzey Buz Denizi'], dogru: 'Güney Okyanusu' }, ' bulunur.',
+  ],
+  serbest: 'Avustralya\'nın yerini, komşu okyanus ve kıtalarını söyleyerek bir cümleyle anlat:',
 };
 
 CLOZE.ozetDunya = {

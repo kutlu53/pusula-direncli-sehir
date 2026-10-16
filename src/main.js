@@ -257,6 +257,7 @@ function hint() {
     ui.toast('İpucu: Haritanı aç ve "Risk katmanı" düğmesine bas. Mavi alanlar sel, kırmızı alanlar heyelan, yeşil alanlar düşük riskli.', 7000);
   } else if (s.tur === 'drone') {
     const left = s.hedefler.filter((h) => !state.fotolar.includes(h.key));
+    if (!left.length) return ui.toast('İpucu: Bütün fotoğraflar çekildi; drone\'u indir.');
     const b = bearing(drone.active ? drone.pos : player.pos, left[0]);
     ui.toast(`İpucu: Aradığın yer: ${left[0].ipucu}. ${b.yon} yönünde, yaklaşık ${Math.round(b.dist * M_PER_UNIT / 50) * 50} metre. Koordinatı: ${geoText(left[0].x, left[0].z)}.`, 8000);
   } else {
