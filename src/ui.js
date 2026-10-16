@@ -1,10 +1,11 @@
 import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, RISKS, riverX, coastZ, fbm, slopeAt, riskAt } from './terrain.js';
 
 import { Sfx } from './audio.js';
+import { TR } from './geo.js';
 
 const $ = (id) => document.getElementById(id);
-const show = (el, on = true) => el.classList.toggle('hidden', !on);
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+export const show = (el, on = true) => el.classList.toggle('hidden', !on);
+export const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 // ---------- Pusula şeridi ----------
 const PX_PER_DEG = 3;
@@ -114,6 +115,7 @@ function ramp(h) {
 }
 
 let relief = null, base = null; // relief: yalnız arazi; base: arazi + yapılar
+export function getRelief(buildings) { if (!base) buildBase(buildings); return relief; }
 function buildBase(buildings) {
   relief = document.createElement('canvas');
   relief.width = relief.height = MAP;
@@ -168,7 +170,7 @@ function label(g, text, x, z, opt = {}) {
 }
 
 // k: küçük ekranda harita küçülünce işaretin okunabilir kalması için büyütme katsayısı
-const markScale = (cv) => Math.min(2.4, Math.max(1, MAP / (cv.clientWidth || MAP) / 1.5));
+export const markScale = (cv) => Math.min(2.4, Math.max(1, MAP / (cv.clientWidth || MAP) / 1.5));
 function planMark(g, p, k = 1) {
   g.fillStyle = p.renk; g.beginPath(); g.arc(toPx(p.x), toPx(p.z), 11 * k, 0, 7); g.fill();
   g.strokeStyle = '#fff'; g.lineWidth = 2.5 * k; g.stroke();
@@ -237,7 +239,7 @@ export function drawMap({ buildings, revealed, found, player, heading, pins = []
 }
 
 // ---------- Kâşif Defteri etkinlikleri ----------
-function actOpen(title, intro) {
+export function actOpen(title, intro) {
   $('act-title').textContent = title;
   const body = $('act-body');
   body.innerHTML = '';
@@ -246,14 +248,14 @@ function actOpen(title, intro) {
   show($('activity'));
   return body;
 }
-function actFinish(text, resolve, value) {
+export function actFinish(text, resolve, value) {
   Sfx.pickup();
   $('act-feedback').textContent = text;
   show($('act-feedback')); show($('act-next'));
   $('act-next').onclick = () => { show($('activity'), false); resolve(value); };
   $('act-next').scrollIntoView?.({ block: 'nearest' });
 }
-const canvasPos = (cv, e) => {
+export const canvasPos = (cv, e) => {
   const r = cv.getBoundingClientRect();
   return [(e.clientX - r.left) / r.width * cv.width, (e.clientY - r.top) / r.height * cv.height];
 };
@@ -303,10 +305,6 @@ export function markOnMap(tasks, buildings) {
 }
 
 // 2) Komşular: etiketleri Ordu'nun çevresindeki doğru yöne yerleştir
-const TR = [[26, 40], [26.4, 41.7], [28, 42], [29, 41.2], [31, 41.1], [33, 42], [35, 42.1], [36.5, 41.3], [38, 41], [40, 41],
-  [41.5, 41.5], [43.5, 41.1], [44.8, 39.7], [44, 39.4], [44.5, 38], [44.3, 37], [42.4, 37.1], [40.7, 37.1], [38, 36.8], [36.7, 36.8],
-  [36.2, 35.9], [35.8, 36.6], [34.6, 36.8], [33.7, 36.2], [32.6, 36.1], [31, 36.8], [30.4, 36.3], [29.2, 36.2], [28.2, 36.8],
-  [27.4, 37], [27.2, 37.9], [26.3, 38.3], [26.8, 39], [26.1, 39.5]];
 function drawTurkey(cv) {
   const g = cv.getContext('2d'), W = cv.width, H = cv.height;
   const P = ([lon, lat]) => [(lon - 25.2) / 20.4 * W, (42.6 - lat) / 7.2 * H];

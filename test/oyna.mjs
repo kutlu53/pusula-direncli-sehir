@@ -156,7 +156,40 @@ async function answerQuiz() {
 // ---- Etkinlikler
 async function doActivity() {
   const has = (q) => page.$(q).then((h) => !!h);
-  if (await has('.ilce-canvas')) {
+  if (await has('.zoom-btn')) { // Uydu Bakışı: üç yükseliş
+    for (let i = 0; i < 3; i++) {
+      await clickText('.zoom-btn', 'Yüksel');
+      await page.waitForFunction(() => { const b = document.querySelector('.zoom-btn'), n = document.querySelector('#act-next'); return (b && !b.disabled && b.getClientRects().length) || (n && n.getClientRects().length); }, { timeout: 15000 });
+      await sleep(150); await shot('act_uzaklas_' + (i + 1));
+    }
+    if (!(await vis('#act-next'))) throw new Error('Uzaklaşma tamamlanmadı');
+    note('Uzaklaşma: ' + (await text('#act-feedback')).slice(0, 50));
+  } else if (await has('.lm-slot')) { // Türkiye'nin çevresi / kıtalar ve okyanuslar: ilk ikisi bilerek ters
+    const names = await page.$$eval('.lm-slot', (l) => l.map((s) => s.dataset.dogru));
+    const disabled = await page.$eval('#act-body > button', (b) => b.disabled);
+    if (!disabled) report.hatalar.push('Konum: "Kontrol et" başta etkin olmamalıydı');
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i < 2 ? 1 - i : i];
+      const chip = await page.evaluateHandle((n) => [...document.querySelectorAll('.nb-chip')].find((c) => c.textContent === n), name);
+      await chip.click();
+      await (await page.$$('.lm-slot'))[i].click();
+    }
+    await shot('act_konum_' + names.length);
+    await clickText('#act-body > button', 'Kontrol et');
+    const fb = await text('#act-feedback');
+    if (!fb.includes(`${names.length} addan ${names.length - 2}`)) report.hatalar.push(`Konum: beklenen "${names.length} addan ${names.length - 2}", gelen: ` + fb.slice(0, 60));
+    note('Konum etiketleme: ' + fb.slice(0, 60));
+  } else if (await has('.koor-canvas')) { // ızgaralı Türkiye: önce yanlış yere, sonra hedeflere dokun
+    const H = JSON.parse(await page.$eval('.koor-canvas', (c) => c.dataset.hedefler));
+    await clickCanvas('.koor-canvas', 0.5, 0.5); await sleep(150);
+    const w = await text('#act-body .act-note');
+    if (!w.includes('❌') || !w.includes('K,')) report.hatalar.push('Koordinat: yanlış dokunuşta koordinat ve uyarı beklenirdi: ' + w.slice(0, 60));
+    else note('Koordinat (yanlış dokunuş): ' + w.slice(0, 70));
+    for (const [fx, fy] of H) { await clickCanvas('.koor-canvas', fx, fy); await sleep(2200); }
+    await shot('act_koordinat');
+    if (!(await vis('#act-next'))) throw new Error('Koordinat etkinliği tamamlanmadı: ' + await text('#act-body .act-task'));
+    note('Koordinat: ' + (await text('#act-feedback')).slice(0, 60));
+  } else if (await has('.ilce-canvas')) {
     const d = await page.$eval('.ilce-canvas', (c) => ({ ...c.dataset }));
     await clickCanvas('.ilce-canvas', +d.wx, +d.wy); await sleep(150); // önce yanlış: Altınordu
     const w = await text('#act-body .act-note');
@@ -353,7 +386,7 @@ while (true) {
     await act(); await sleep(250);
     await handleBusy();
     report.adimlar.push({ id: s.id, yurume_sn: +r.sure.toFixed(0), takilma: r.stuck });
-    if (s.step === 1 || s.step === 9 || s.step === 11) await testOverlays('adim' + s.step);
+    if (s.step === 1 || s.step === 10 || s.step === 12) await testOverlays('adim' + s.step);
   } else if (s.tur === 'tahliye') {
     await shot('firtina');
     while ((await G()).tur === 'tahliye') {

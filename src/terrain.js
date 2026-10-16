@@ -106,3 +106,10 @@ export function groundHeight(x, z) {
 
 export const walkable = (x, z) =>
   Math.abs(x) < HALF - 12 && Math.abs(z) < HALF - 12 && groundHeight(x, z) > -0.7;
+
+// Dünya koordinatı → enlem/boylam. Oyun merkezi (0,0) Altınordu kıyısına denk gelir; kuzey -z olduğundan enlem z arttıkça azalır.
+export const GEO = { lat: 40.985, lon: 37.88, mLat: 111320, mLon: 84000 };
+export const toGeo = (x, z) => ({ lat: GEO.lat - (z * M_PER_UNIT) / GEO.mLat, lon: GEO.lon + (x * M_PER_UNIT) / GEO.mLon });
+const deg = (v, n) => v.toFixed(n).replace('.', ',') + '°';
+export const geoText = (x, z, n = 3) => { const g = toGeo(x, z); return `${deg(g.lat, n)} K · ${deg(g.lon, n)} D`; };
+export const degText = deg;

@@ -135,8 +135,56 @@ export const STEPS = [
       aciklama: 'Nüfus arttıkça yeni evlere ihtiyaç doğdu. Kıyıdaki dar düzlük dolunca insanlar ırmak kenarına ve yamaçlara yerleşti.',
     },
     sonra: [
-      ['Hasan Usta (telsiz)', 'Şimdi sıra sende. Drone\'u havalandır ve albümde gördüğün üç riskli yeri gerçekte bul.'],
-      ['Hasan Usta (telsiz)', 'Aradıkların: ırmak kenarındaki evler, dik yamaçtaki evler ve kesilen orman. Bulduğun yerin üzerine gel ve fotoğrafını çek!'],
+      ['Hasan Usta (telsiz)', 'Şimdi sıra sende. Ama riskli yerleri aramadan önce drone\'la bir ilk uçuş yapalım: dümdüz yukarı, en yükseğe!'],
+      ['Hasan Usta (telsiz)', 'Terasta dur ve ilk uçuşu başlat. Yükseldikçe Ordu küçülür; şehrin, ülkenin ve dünyanın büyük resmini göreceksin.'],
+    ],
+  },
+  {
+    // SB.6.2.1: Ordu → Türkiye → kıtalar → dünya; göreceli ve mutlak konum
+    id: 'uydu', bolum: 2, hedef: { x: BOZTEPE.x + 4, z: BOZTEPE.z - 3 }, tur: 'nesne', etiket: 'İlk uçuş: en yükseğe çık',
+    gorev: 'İlk uçuş: drone\'u en yükseğe çıkar ve Ordu\'nun dünyadaki yerine bak',
+    once: [
+      ['Hasan Usta (telsiz)', 'Bir yerin nerede olduğunu iki türlü anlatırız, kâşif. Çevresindekilere göre söylersek buna GÖRECELİ konum denir: "Ordu, Samsun\'un doğusunda" gibi.'],
+      ['Hasan Usta (telsiz)', 'Enlem ve boylam sayılarıyla söylersek buna da MUTLAK konum denir. Önce göreceli konumla başlayalım: yüksel ve bak!'],
+    ],
+    akis: [
+      { etkinlik: 'uzaklas' },
+      { diyalog: [['Hasan Usta (telsiz)', 'Gördün mü? Ordu Türkiye\'nin kuzeyinde, Türkiye ise iki kıtanın birleştiği yerde. Şimdi biraz alçal: Türkiye\'nin çevresindeki denizleri ve komşu ülkeleri yerlerine koy.']] },
+      { etkinlik: 'turkiye' },
+      { diyalog: [['Hasan Usta (telsiz)', 'Şimdi yeniden uydu yüksekliğine çık. Dünyada yedi kıta ve beş okyanus var. Adlarını haritada yerlerine koy; kırmızı nokta Türkiye.']] },
+      { etkinlik: 'dunya' },
+      { soru: {
+        id: 'B2S5', beceri: 'Göreceli konum (kıtalar ve okyanuslar)', kazanim: 'SB.6.2.1a',
+        metin: 'Dünya haritasına göre Atlas Okyanusu hangi kıtaların arasında yer alır?',
+        secenekler: [
+          'Asya ile Avustralya arasında',
+          'Amerika kıtaları ile Avrupa ve Afrika arasında',
+          'Afrika ile Asya arasında',
+          'Antarktika ile Avustralya arasında',
+        ], dogru: 1,
+        aciklama: 'Atlas Okyanusu batıda Kuzey ve Güney Amerika, doğuda Avrupa ve Afrika arasındadır. Türkiye\'ye en yakın okyanus da Atlas Okyanusu\'dur; Akdeniz ona Cebelitarık Boğazı\'yla bağlanır.',
+      } },
+      { diyalog: [
+        ['Hasan Usta (telsiz)', 'Buraya kadar hep "kuzeyinde, batısında" dedik; bu göreceli konumdu. Peki uzaydaki bir uydu Ordu\'yu nasıl bulur? Sayılarla!'],
+        ['Hasan Usta (telsiz)', 'Dünyanın üzerinde çizgiler düşün. Ekvator\'a paralel çizgilere PARALEL denir, sayısına ENLEM. Kutuplardan geçen çizgilere MERİDYEN denir, sayısına BOYLAM.'],
+        ['Hasan Usta (telsiz)', 'Her yerin bir enlem ve bir boylam sayısı vardır; işte bu mutlak konumdur. Izgaralı haritada Türkiye\'nin uç noktalarını bul, sayıları kendin oku.'],
+      ] },
+      { etkinlik: 'koordinat' },
+      { soru: {
+        id: 'B2S6', beceri: 'Mutlak konum (enlem-boylam)', kazanim: 'SB.6.2.1a',
+        metin: 'Ordu 41° K, 38° D; İstanbul 41° K, 29° D koordinatındadır. Bu sayılara göre İstanbul, Ordu\'nun hangi yönündedir?',
+        secenekler: ['Kuzeyinde', 'Güneyinde', 'Batısında', 'Doğusunda'], dogru: 2,
+        aciklama: 'İkisi de 41° kuzey paralelinde; enlemleri aynı. Boylam doğuya gidildikçe büyür. İstanbul\'un boylamı (29° D) Ordu\'nunkinden (38° D) küçük olduğu için İstanbul batıda kalır.',
+      } },
+    ],
+    sonra: [
+      ['Hasan Usta (telsiz)', 'Artık drone ekranının köşesinde enlem ve boylam yazacak. Kuzeye uçunca enlem, doğuya uçunca boylam büyür; dene ve gör.'],
+      ['Hasan Usta (telsiz)', 'Haritacılar da uydular da yeri böyle bulur. Şimdi gördüklerini defterine kendi sözlerinle yaz.'],
+    ],
+    etkinlikler: ['ozetDunya'],
+    kapanis: [
+      ['Hasan Usta (telsiz)', 'Şimdi işe dönelim. Drone\'u kaldır ve albümde gördüğün üç riskli yeri bul: ırmak kenarındaki evler, dik yamaçtaki evler ve kesilen orman.'],
+      ['Hasan Usta (telsiz)', 'Bulduğun yerin üzerine gel ve fotoğrafını çek! İpucu istersen sana yön ve koordinat veririm.'],
     ],
   },
   {
@@ -345,6 +393,20 @@ export const STEPS = [
       ], dogru: 1,
       aciklama: 'Erken uyarı zaman kazandırır; bu zaman insanları riskli yerden çıkarmak için kullanılır. Afet ve acil durumlarda 112 Acil Çağrı Merkezi aranır.',
     },
+    akis: [
+      { diyalog: [['112 görevlisi (telefon)', '112 Acil Çağrı Merkezi. Konumunuzu söyler misiniz?']] },
+      { soru: {
+        id: 'B6S5', beceri: 'Mutlak konumu kullanma', kazanim: 'SB.6.2.1a',
+        metin: '112 görevlisi konumunu soruyor. Ekibin seni en hızlı bulmasını sağlayan yanıt hangisi?',
+        secenekler: [
+          'Irmağın oralardayım, büyük bir ağacın yanında.',
+          'Ordu\'dayım, yağmur çok şiddetli.',
+          'Melet Köprüsü\'nün güneyi, ırmak kenarı; koordinatım 40,98° K, 37,89° D.',
+          'Şehrin biraz dışında bir yerdeyim.',
+        ], dogru: 2,
+        aciklama: 'Göreceli konum (köprünün güneyi) ile mutlak konum (enlem ve boylam) birlikte verilince ekip yeri haritadan şaşmadan bulur. Telefonlar ve harita uygulamaları bu koordinatları gösterir.',
+      } },
+    ],
     sonra: [
       ['Elif Abla (telsiz)', '112\'ye haber verildi, ekipler yolda. Ama onlar gelene kadar aileleri uyarmak bize düşüyor. Süren kısıtlı!'],
       ['Elif Abla (telsiz)', 'Önce ırmak kenarındaki evlere koş; su en önce orayı basar. Sonra Boztepe yamacındaki evlere git.'],
@@ -526,7 +588,7 @@ export const ILCELER = {
     ipucu: 'İç kesimde, Altınordu\'nun GÜNEYBATISINDA. Gürgentepe\'nin hemen güneyinde.' },
   ulubey: { ad: 'Ulubey', k: [37.76, 40.87] }, kabaduz: { ad: 'Kabadüz', k: [37.89, 40.86] },
   mesudiye: { ad: 'Mesudiye', k: [37.77, 40.46], gizli: true,
-    ipucu: 'İlin en GÜNEYİNDEKİ ilçe; denizden en uzak olanı.' },
+    ipucu: 'İlin en GÜNEYİNDEKİ ilçe; denizden en uzak olanı. Mutlak konumu yaklaşık 40,5° K, 37,8° D: enlemi diğer ilçelerden küçük.' },
 };
 
 // ---------------- 6. bölüm: afet farkındalık afişi ----------------
@@ -732,6 +794,59 @@ CLOZE.ozet7 = {
     { sec: ['heyelan', 'sel'], dogru: 'heyelan' }, ', fay hattına yakın güney ilçelerinde ', { sec: ['sel', 'deprem'], dogru: 'deprem' }, ' riski öne çıkar.',
   ],
   serbest: 'Bu oyunda öğrendiğin en önemli şey neydi? Kendi mahallende neye dikkat edeceksin?',
+};
+
+// ---------------- 2. bölüm "Uydu Bakışı": SB.6.2.1 ----------------
+export const KONUM = {
+  turkiye: {
+    kod: 'B2E3', kazanim: 'SB.6.2.1b', harita: 'turkiye', baslik: 'Türkiye\'nin çevresi: denizler ve komşular', defter: 'Türkiye\'nin göreceli konumu',
+    giris: 'Önce aşağıdaki bir ada, sonra haritada o adın yerindeki kutuya dokun. Turuncu alan Türkiye, kırmızı nokta Ordu.',
+    yuvalar: [
+      { ad: 'Karadeniz', k: [34.5, 43.3] }, { ad: 'Ege Denizi', k: [25.0, 38.4] }, { ad: 'Akdeniz', k: [31.5, 34.4] }, { ad: 'Marmara Denizi', k: [28.3, 40.65] },
+      { ad: 'Yunanistan', k: [23.3, 39.6] }, { ad: 'Bulgaristan', k: [25.4, 42.6] }, { ad: 'Gürcistan', k: [43.4, 42.4] }, { ad: 'Ermenistan', k: [45.0, 40.4] },
+      { ad: 'İran', k: [45.6, 37.6] }, { ad: 'Irak', k: [43.0, 35.2] }, { ad: 'Suriye', k: [38.6, 34.6] },
+    ],
+    aciklama: 'Türkiye\'nin üç tarafı denizlerle çevrilidir: kuzeyde Karadeniz, batıda Ege Denizi, güneyde Akdeniz; Marmara Denizi iç denizimizdir. Komşularımız batıda Yunanistan ve Bulgaristan, doğuda Gürcistan, Ermenistan, Nahçıvan ve İran, güneyde Irak ve Suriye\'dir.',
+  },
+  dunya: {
+    kod: 'B2E4', kazanim: 'SB.6.2.1b', harita: 'dunya', baslik: 'Kıtalar ve okyanuslar', defter: 'Kıtalar ve okyanuslar',
+    giris: 'Yedi kıta ve beş okyanusun adını haritada yerine koy. Kırmızı nokta Türkiye.',
+    yuvalar: [
+      { ad: 'Kuzey Amerika', k: [-100, 48] }, { ad: 'Güney Amerika', k: [-60, -16] }, { ad: 'Afrika', k: [20, 4] }, { ad: 'Avrupa', k: [12, 56] },
+      { ad: 'Asya', k: [95, 48] }, { ad: 'Avustralya', k: [134, -26] }, { ad: 'Antarktika', k: [40, -79] },
+      { ad: 'Büyük Okyanus', k: [-150, 4] }, { ad: 'Atlas Okyanusu', k: [-35, 22] }, { ad: 'Hint Okyanusu', k: [78, -24] },
+      { ad: 'Kuzey Buz Denizi', k: [110, 84] }, { ad: 'Güney Okyanusu', k: [-30, -58] },
+    ],
+    aciklama: 'Dünyada yedi kıta (Asya, Avrupa, Afrika, Kuzey Amerika, Güney Amerika, Avustralya, Antarktika) ve beş okyanus (Büyük, Atlas, Hint, Kuzey Buz Denizi, Güney Okyanusu) vardır. Türkiye, Asya ile Avrupa\'nın birleştiği yerdedir; bize en yakın okyanus Atlas Okyanusu\'dur.',
+  },
+};
+
+export const KOORDINAT = {
+  kod: 'B2E5', kazanim: 'SB.6.2.1a', tol: 1.3,
+  giris: 'Izgaradaki sayılar enlem (° K) ve boylam (° D). İstenen noktaya dokun; dokunduğun yerin koordinatı altta yazar.',
+  gorevler: [
+    { metin: 'Türkiye\'nin en GÜNEY ucuna dokun', k: [36.2, 35.9], etiket: '36° K', sonuc: 'En güney nokta 36° kuzey paralelinde (Hatay).', ipucu: 'Daha güneye, Akdeniz\'in doğu ucuna bak.' },
+    { metin: 'Türkiye\'nin en KUZEY ucuna dokun', k: [35.0, 42.1], etiket: '42° K', sonuc: 'En kuzey nokta 42° kuzey paralelinde (Sinop).', ipucu: 'Karadeniz\'e en çok sokulan burnu bul.' },
+    { metin: 'Türkiye\'nin en BATI ucuna dokun', k: [26.0, 40.0], etiket: '26° D', sonuc: 'En batı nokta 26° doğu meridyeninde (Gökçeada).', ipucu: 'Ege Denizi\'nin kuzeyine, en sol uca bak.' },
+    { metin: 'Türkiye\'nin en DOĞU ucuna dokun', k: [44.8, 39.7], etiket: '45° D', sonuc: 'En doğu nokta 45° doğu meridyeninde (Iğdır).', ipucu: 'Haritanın sağ ucuna, Ermenistan ile İran\'ın arasına bak.' },
+    { metin: 'Şimdi ORDU\'ya dokun ve koordinatını oku', k: [37.88, 40.985], etiket: '41° K, 38° D', sonuc: 'Ordu yaklaşık 41° K enlemi ile 38° D boylamındadır.', ipucu: 'Kırmızı nokta Ordu; Karadeniz kıyısının ortasında.' },
+  ],
+  bitis: 'Türkiye 36° - 42° kuzey paralelleri ile 26° - 45° doğu meridyenleri arasındadır. Bu sayılar ülkemizin mutlak konumudur; dünyanın her yeri için böyle iki sayı vardır.',
+};
+
+CLOZE.ozetDunya = {
+  baslik: 'Dünyadaki yerimizi özetle',
+  defter: 'Dünyadaki yerimiz',
+  kazanim: 'SB.6.2.1c',
+  parcalar: [
+    'Türkiye, ', { sec: ['Asya ve Avrupa', 'Afrika ve Asya', 'Avrupa ve Afrika'], dogru: 'Asya ve Avrupa' }, ' kıtalarında yer alır; kuzeyinde ',
+    { sec: ['Akdeniz', 'Karadeniz', 'Ege Denizi'], dogru: 'Karadeniz' }, ', güneyinde ', { sec: ['Akdeniz', 'Karadeniz'], dogru: 'Akdeniz' },
+    ' vardır. Ülkemiz ', { sec: ['36° - 42°', '26° - 45°'], dogru: '36° - 42°' }, ' kuzey paralelleri ile ',
+    { sec: ['36° - 42°', '26° - 45°'], dogru: '26° - 45°' }, ' doğu meridyenleri arasındadır. Dünyada ',
+    { sec: ['5', '7', '9'], dogru: '7' }, ' kıta ve ', { sec: ['3', '5', '7'], dogru: '5' }, ' okyanus vardır; bize en yakın okyanus ',
+    { sec: ['Hint Okyanusu', 'Atlas Okyanusu', 'Büyük Okyanus'], dogru: 'Atlas Okyanusu' }, '.',
+  ],
+  serbest: 'Uzaydan gelen bir konuğa Türkiye\'nin dünyadaki yerini kendi cümlenle anlat:',
 };
 
 export const FARKLAR = [

@@ -4,10 +4,11 @@ import { buildWorld } from './world.js';
 import { Player } from './player.js';
 import { Drone } from './drone.js';
 import * as ui from './ui.js';
-import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS, ILCELER } from './story.js';
+import { STEPS, CHAPTERS, NEXT_CHAPTER, ISARET, KOMSU, CLOZE, FARKLAR, KATMAN_YERLER, LABS, PLAN, AFIS, ILCELER, KONUM, KOORDINAT } from './story.js';
+import * as konum from './konum.js';
 import { Log } from './log.js';
 import { Sfx } from './audio.js';
-import { PLACES, M_PER_UNIT, riskAt, slopeAt, coastZ } from './terrain.js';
+import { PLACES, M_PER_UNIT, riskAt, slopeAt, coastZ, geoText } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -257,7 +258,7 @@ function hint() {
   } else if (s.tur === 'drone') {
     const left = s.hedefler.filter((h) => !state.fotolar.includes(h.key));
     const b = bearing(drone.active ? drone.pos : player.pos, left[0]);
-    ui.toast(`İpucu: Aradığın yer: ${left[0].ipucu}. ${b.yon} yönünde, yaklaşık ${Math.round(b.dist * M_PER_UNIT / 50) * 50} metre.`, 7000);
+    ui.toast(`İpucu: Aradığın yer: ${left[0].ipucu}. ${b.yon} yönünde, yaklaşık ${Math.round(b.dist * M_PER_UNIT / 50) * 50} metre. Koordinatı: ${geoText(left[0].x, left[0].z)}.`, 8000);
   } else {
     const t = targetInfo();
     ui.toast(`İpucu: Hedef ${t.yon} yönünde, yaklaşık ${Math.round(t.dist * M_PER_UNIT / 50) * 50} metre uzakta.`);
@@ -267,7 +268,7 @@ function hint() {
 
 async function ask(s, soru) {
   const r = await ui.quiz(soru);
-  log({ olay: 'yanit', soru: soru.id, beceri: soru.beceri, secilen: r.secilen, dogru: r.dogru ? 1 : 0, sure_sn: r.sure, adim: s.id });
+  log({ olay: 'yanit', soru: soru.id, beceri: soru.beceri, kazanim: soru.kazanim, secilen: r.secilen, dogru: r.dogru ? 1 : 0, sure_sn: r.sure, adim: s.id });
   state.asked++;
   if (r.dogru) { state.score += 100; state.correct++; }
   note(soru.beceri, soru.aciklama);
@@ -283,6 +284,21 @@ async function runActs(s, names, veri = {}) {
       state.ilceler.push(veri.ilce);
       note(ILCELER[veri.ilce].ad + ' nerede?', ILCELER[veri.ilce].ipucu);
       save();
+    } else if (name === 'uzaklas') { // SB.6.2.1b: Ordu → Türkiye → kıtalar → dünya
+      const r = await konum.zoomOut(world.buildings);
+      log({ olay: 'uzaklas', soru: 'B2E2', kazanim: 'SB.6.2.1b', secilen: r.sure + ' sn', dogru: 1, adim: s.id });
+      state.score += 30;
+      note('Ordu dünyanın neresinde?', 'Ordu, Türkiye\'nin kuzeyinde Karadeniz kıyısındadır. Türkiye, Asya ile Avrupa kıtalarının birleştiği yerdedir. Dünyada 7 kıta ve 5 okyanus vardır.');
+    } else if (KONUM[name]) { // SB.6.2.1b: Türkiye'nin çevresi / kıtalar ve okyanuslar
+      const spec = KONUM[name], r = await konum.labelMap(spec);
+      log({ olay: 'konum', soru: spec.kod, kazanim: spec.kazanim, secilen: JSON.stringify(r.yanit), dogru: `${r.dogru}/${r.toplam}`, adim: s.id });
+      state.score += r.dogru * 10;
+      note(spec.defter, spec.aciklama);
+    } else if (name === 'koordinat') { // SB.6.2.1a: Türkiye'nin uç noktaları ve Ordu (enlem-boylam)
+      const r = await konum.coordGrid(KOORDINAT);
+      r.forEach((t, i) => log({ olay: 'koordinat', soru: `${KOORDINAT.kod}-${i + 1}`, kazanim: KOORDINAT.kazanim, secilen: `${t.lat} K, ${t.lon} D (${t.yanlis} yanlış dokunuş)`, dogru: t.yanlis ? 0 : 1, adim: s.id, metin: t.metin }));
+      state.score += r.reduce((a, t) => a + Math.max(5, 20 - t.yanlis * 5), 0);
+      note('Mutlak konum', KOORDINAT.bitis);
     } else if (name === 'isaretle') {
       const res = await ui.markOnMap(ISARET, world.buildings);
       res.forEach((r, i) => log({ olay: 'isaretle', soru: 'B1E1-' + (i + 1), secilen: r.uzaklik + ' m', dogru: r.dogru ? 1 : 0, adim: s.id, metin: r.metin }));
@@ -323,7 +339,7 @@ async function runActs(s, names, veri = {}) {
       note('Kırk yılda değişenler', FARKLAR.map((f) => f.metin).join(' '));
     } else {
       const spec = CLOZE[name], r = await ui.cloze(spec);
-      log({ olay: 'ozet', soru: name, dogru: `${r.dogru}/${r.toplam}`, adim: s.id, metin: r.serbest });
+      log({ olay: 'ozet', soru: name, kazanim: spec.kazanim, dogru: `${r.dogru}/${r.toplam}`, adim: s.id, metin: r.serbest });
       state.score += r.dogru * 15 + (r.serbest.length > 15 ? 30 : 0);
       note(spec.defter, r.cumle + (r.serbest ? ' ✍️ Kendi cümlem: ' + r.serbest : ''));
     }
@@ -455,7 +471,7 @@ if (Log.load()) $('continue').classList.remove('hidden');
 
 // Otomatik oynanış testi için durum erişimi (?test=1)
 if (qp.has('test')) {
-  window.__oyun = { player, drone, world, STEPS, ISARET, FARKLAR, KATMAN_YERLER, PLAN, riskAt, slopeAt, hedef: () => hedefOf(step()), basla: (kayit) => begin(kayit),
+  window.__oyun = { player, drone, world, STEPS, ISARET, FARKLAR, KATMAN_YERLER, PLAN, KONUM, KOORDINAT, riskAt, slopeAt, hedef: () => hedefOf(step()), basla: (kayit) => begin(kayit),
     get state() { return state; }, get mode() { return mode; } };
 }
 
@@ -507,6 +523,7 @@ renderer.setAnimationLoop(() => {
     if (drone.active) drone.update(dt, playing ? keys : {});
     world.update(dt, t, drone.active ? drone.focus : player.pos, drone.active, camera.position);
     ui.updateCompass(player.headingDeg);
+    if (drone.active) $('drone-gps').textContent = geoText(drone.pos.x, drone.pos.z);
     // Ortam sesleri: kıyıya yakınken deniz, fırtınada yağmur; adım sesleri
     const st0 = step(), kiyi = Math.max(0, 1 - Math.abs(player.pos.z - coastZ(player.pos.x)) / 140);
     Sfx.frame(t, dt, { deniz: 0.25 + 0.75 * kiyi, yagmur: (st0 && st0.firtina) || 0, drone: drone.active });
