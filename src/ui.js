@@ -1,4 +1,4 @@
-import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, RISKS, riverX, coastZ, fbm, slopeAt, riskAt } from './terrain.js';
+import { WORLD, HALF, M_PER_UNIT, terrainHeight, PLACES, PIER, BOZTEPE, RISKS, riverX, coastZ, fbm, slopeAt, riskAt } from './terrain.js';
 
 import { Sfx } from './audio.js';
 import { TR } from './geo.js';
@@ -140,6 +140,8 @@ function buildBase(buildings) {
   b2.drawImage(relief, 0, 0);
   b2.fillStyle = '#7d7d86';
   for (const b of buildings) b2.fillRect(toPx(b.x - b.w / 2), toPx(b.z - b.d / 2), (b.w / WORLD) * MAP, (b.d / WORLD) * MAP);
+  // iskele: denize uzanan tahta yol
+  b2.strokeStyle = '#6b4a2e'; b2.lineWidth = 4; b2.beginPath(); b2.moveTo(toPx(PIER.x), toPx(PIER.z0)); b2.lineTo(toPx(PIER.x), toPx(PIER.z1)); b2.stroke();
 }
 
 // CBS katmanları: eğim, taşkın alanı ve bunların birleşimi olan risk
@@ -245,8 +247,38 @@ export function actOpen(title, intro) {
   body.innerHTML = '';
   if (intro) body.appendChild(el('p', 'act-intro', intro));
   show($('act-feedback'), false); show($('act-next'), false);
+  body.parentElement.classList.remove('wide');
+  body.classList.remove('picking');
   show($('activity'));
   return body;
+}
+// Adları sürükleyip kutuya bırakma (fare ve dokunma). Dokun-seç-dokun yöntemi de çalışmaya devam eder.
+export function enableDrag(chips, slotSel, drop) {
+  for (const c of chips) {
+    c.style.touchAction = 'none';
+    c.addEventListener('pointerdown', (e) => {
+      if (c.classList.contains('used') || c.disabled) return;
+      const x0 = e.clientX, y0 = e.clientY;
+      let ghost = null, over = null;
+      const move = (ev) => {
+        if (!ghost) {
+          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 8) return;
+          ghost = c.cloneNode(true); ghost.classList.add('drag-ghost'); document.body.appendChild(ghost);
+          c.classList.add('dragging');
+        }
+        ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+        const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(slotSel) || null;
+        if (t !== over) { over?.classList.remove('over'); t?.classList.add('over'); over = t; }
+      };
+      const up = () => {
+        for (const ev of ['pointermove', 'pointerup', 'pointercancel']) removeEventListener(ev, ev === 'pointermove' ? move : up);
+        if (!ghost) return;
+        ghost.remove(); c.classList.remove('dragging'); over?.classList.remove('over');
+        if (over) drop(c, over);
+      };
+      addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+  }
 }
 export function actFinish(text, resolve, value) {
   Sfx.pickup();
@@ -322,7 +354,7 @@ function drawTurkey(cv) {
 export function placeNeighbors(spec) {
   return new Promise((resolve) => {
     const body = actOpen('Ordu nerede? Komşularını yerleştir',
-      'Kırmızı nokta Ordu. Önce aşağıdaki bir isme, sonra o ismin Ordu\'ya göre bulunduğu yöndeki kutuya dokun.');
+      'Kırmızı nokta Ordu. İsmi sürükleyip Ordu\'ya göre bulunduğu yöndeki kutuya bırak (ya da önce isme, sonra kutuya dokun).');
     const tr = el('canvas', 'act-turkey'); tr.width = 340; tr.height = 122; drawTurkey(tr);
     const grid = el('div', 'nb-grid'), pool = el('div', 'nb-pool'), check = el('button', '', 'Kontrol et');
     const order = ['', 'kuzey', '', 'bati', 'ORDU', 'dogu', 'guneybati', 'guney', ''];
@@ -331,27 +363,29 @@ export function placeNeighbors(spec) {
     let picked = null;
     const chips = Object.values(spec.yuvalar).sort().map((name) => {
       const c = el('button', 'nb-chip', name);
-      c.onclick = () => { if (c.classList.contains('used')) return; picked = c; chips.forEach((o) => o.classList.toggle('sel', o === c)); };
+      c.onclick = () => { if (c.classList.contains('used')) return; picked = c; chips.forEach((o) => o.classList.toggle('sel', o === c)); body.classList.add('picking'); };
       pool.appendChild(c);
       return c;
     });
     const sync = () => { check.disabled = Object.keys(placed).length < chips.length; };
+    // Kutuya ad koy (chip boşsa kutuyu boşalt)
+    const put = (key, chip) => {
+      if (check.classList.contains('hidden')) return;
+      const cell = slots[key];
+      if (placed[key]) { placed[key].classList.remove('used'); delete placed[key]; cell.textContent = names[key]; cell.classList.remove('full'); }
+      if (chip) { placed[key] = chip; chip.classList.add('used'); cell.textContent = chip.textContent; cell.classList.add('full'); }
+      picked = null; chips.forEach((o) => o.classList.remove('sel')); body.classList.remove('picking');
+      sync();
+    };
     for (const key of order) {
       const cell = el('div', key === 'ORDU' ? 'nb-center' : key ? 'nb-slot' : 'nb-empty', key === 'ORDU' ? 'ORDU' : key ? names[key] : '');
       if (key && key !== 'ORDU') {
-        slots[key] = cell;
-        cell.onclick = () => {
-          if (check.classList.contains('hidden')) return;
-          if (placed[key]) { placed[key].classList.remove('used'); delete placed[key]; cell.textContent = names[key]; cell.classList.remove('full'); }
-          if (picked) {
-            placed[key] = picked; picked.classList.add('used'); picked.classList.remove('sel');
-            cell.textContent = picked.textContent; cell.classList.add('full'); picked = null;
-          }
-          sync();
-        };
+        slots[key] = cell; cell.dataset.k = key;
+        cell.onclick = () => put(key, picked);
       }
       grid.appendChild(cell);
     }
+    enableDrag(chips, '.nb-slot', (c, slot) => put(slot.dataset.k, c));
     check.onclick = () => {
       let n = 0;
       const yanit = {};
@@ -374,15 +408,22 @@ export function placeNeighbors(spec) {
 export function cloze(spec) {
   return new Promise((resolve) => {
     const body = actOpen(spec.baslik, 'Boşluklara uygun sözcükleri seç.');
-    const para = el('p', 'cloze'), selects = [];
-    for (const part of spec.parcalar) {
-      if (typeof part === 'string') { para.append(part); continue; }
-      const s = el('select');
-      s.appendChild(new Option('… seç …', ''));
-      part.sec.forEach((o) => s.appendChild(new Option(o, o)));
-      s.dataset.dogru = part.dogru;
-      s.onchange = () => { done.disabled = selects.some((x) => !x.value); };
-      selects.push(s); para.appendChild(s);
+    // Tek özet ya da (bölüm sonu defterinde) başlıklı birkaç özet aynı sayfada
+    const bolumler = spec.bolumler || [spec], selects = [], paras = [];
+    for (const b of bolumler) {
+      const para = el('p', 'cloze'), kendi = [];
+      if (spec.bolumler) paras.push(el('h3', 'cloze-head', b.ad));
+      for (const part of b.parcalar) {
+        if (typeof part === 'string') { para.append(part); continue; }
+        const s = el('select');
+        s.appendChild(new Option('… seç …', ''));
+        part.sec.forEach((o) => s.appendChild(new Option(o, o)));
+        s.dataset.dogru = part.dogru;
+        s.onchange = () => { done.disabled = selects.some((x) => !x.value); };
+        selects.push(s); kendi.push(s); para.appendChild(s);
+      }
+      b._sel = kendi;
+      paras.push(para);
     }
     const q = el('label', 'cloze-free', spec.serbest), ta = el('textarea');
     ta.rows = 2; ta.maxLength = 300; ta.placeholder = 'Buraya yaz…';
@@ -391,39 +432,55 @@ export function cloze(spec) {
     done.disabled = true;
     done.onclick = () => {
       let n = 0;
-      for (const s of selects) {
-        const ok = s.value === s.dataset.dogru;
-        if (ok) n++;
-        s.classList.add(ok ? 'right' : 'wrong');
-        s.value = s.dataset.dogru; s.disabled = true;
-      }
+      const sonuc = bolumler.map((b) => {
+        let d = 0;
+        for (const s of b._sel) {
+          const ok = s.value === s.dataset.dogru;
+          if (ok) d++;
+          s.classList.add(ok ? 'right' : 'wrong');
+          s.value = s.dataset.dogru; s.disabled = true;
+        }
+        n += d;
+        return { kod: b.kod, kazanim: b.kazanim, defter: b.defter, dogru: d, toplam: b._sel.length,
+          cumle: b.parcalar.map((p) => (typeof p === 'string' ? p : p.dogru)).join('') };
+      });
       ta.disabled = true; show(done, false);
-      const cumle = spec.parcalar.map((p) => (typeof p === 'string' ? p : p.dogru)).join('');
       actFinish(`${selects.length} boşluktan ${n} tanesi doğruydu. Doğru özet defterine yazıldı.`, resolve,
-        { dogru: n, toplam: selects.length, cumle, serbest: ta.value.trim() });
+        { dogru: n, toplam: selects.length, cumle: sonuc.map((b) => b.cumle).join(' '), serbest: ta.value.trim(), bolumler: spec.bolumler ? sonuc : null });
     };
-    body.append(para, q, done);
+    body.append(...paras, q, done);
   });
 }
 
 // 4) Eski - yeni hava fotoğrafı: farkları bul
-const AIR = { x0: -260, z0: -140, w: 600, h: 460, s: 0.7 };
+// İki fotoğraf yalnızca üç yerde farklıdır: ırmak kenarı, Boztepe yamacı ve güneydeki orman.
+const AIR = { x0: -260, z0: -140, w: 600, h: 460, s: 1.2 };
 function drawAerial(cv, old, buildings) {
-  const g = cv.getContext('2d'), k = MAP / WORLD;
-  const ax = (x) => (x - AIR.x0) * AIR.s, az = (z) => (z - AIR.z0) * AIR.s;
+  const g = cv.getContext('2d'), k = MAP / WORLD, S = AIR.s;
+  const ax = (x) => (x - AIR.x0) * S, az = (z) => (z - AIR.z0) * S;
   g.drawImage(relief, toPx(AIR.x0), toPx(AIR.z0), AIR.w * k, AIR.h * k, 0, 0, cv.width, cv.height);
-  if (!old) { g.fillStyle = 'rgba(150,115,75,.85)'; g.beginPath(); g.arc(ax(RISKS.orman.x), az(RISKS.orman.z), 36 * AIR.s, 0, 7); g.fill(); }
-  g.fillStyle = 'rgba(38,92,48,.8)';
+  const acik = [[RISKS.orman, 40], [RISKS.yamac, 27]]; // ağaçları kesilen alanlar: çıplak toprak
+  if (!old) for (const [p, r] of acik) { g.fillStyle = 'rgba(176,128,78,.92)'; g.beginPath(); g.arc(ax(p.x), az(p.z), r * S, 0, 7); g.fill(); }
+  g.fillStyle = 'rgba(38,92,48,.85)';
   for (let x = AIR.x0; x < AIR.x0 + AIR.w; x += 9) for (let z = AIR.z0; z < AIR.z0 + AIR.h; z += 9) {
     const h = terrainHeight(x, z), s = z - coastZ(x);
-    if (h < 6 || (s < 160 && h < 9) || fbm(x * 0.02 + 40, z * 0.02) < 0.36) continue;
-    if (!old && (Math.hypot(x - RISKS.orman.x, z - RISKS.orman.z) < 38 || Math.hypot(x - RISKS.yamac.x, z - RISKS.yamac.z) < 24)) continue;
-    g.beginPath(); g.arc(ax(x) + (fbm(x, z) - 0.5) * 5, az(z) + (fbm(z, x) - 0.5) * 5, 2.6, 0, 7); g.fill();
+    const eskiOrman = acik.some(([p, r]) => Math.hypot(x - p.x, z - p.z) < r + 2);
+    if (!eskiOrman && (h < 6 || (s < 160 && h < 9) || fbm(x * 0.02 + 40, z * 0.02) < 0.36)) continue;
+    if (eskiOrman && (!old || h < 2)) continue;
+    g.beginPath(); g.arc(ax(x) + (fbm(x, z) - 0.5) * 5 * S, az(z) + (fbm(z, x) - 0.5) * 5 * S, 3.6 * S, 0, 7); g.fill();
   }
-  g.fillStyle = '#5f5f69';
   for (const b of buildings) {
-    if (old && (b.risk || Math.abs(b.x - 40) > 125 || b.z - coastZ(b.x) > 95)) continue;
-    g.fillRect(ax(b.x - b.w / 2), az(b.z - b.d / 2), Math.max(3, b.w * AIR.s), Math.max(3, b.d * AIR.s));
+    if (old && b.risk) continue;
+    const w = Math.max(3, b.w * S), d = Math.max(3, b.d * S);
+    if (b.risk) { // yeni evler: kiremit çatılı ve çerçeveli, kolay seçilir
+      g.fillStyle = '#c8442c'; g.fillRect(ax(b.x) - w / 2 - 1.5, az(b.z) - d / 2 - 1.5, w + 3, d + 3);
+      g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.strokeRect(ax(b.x) - w / 2 - 1.5, az(b.z) - d / 2 - 1.5, w + 3, d + 3);
+    } else { g.fillStyle = '#5f5f69'; g.fillRect(ax(b.x) - w / 2, az(b.z) - d / 2, w, d); }
+  }
+  // yön bulmayı kolaylaştıran yer adları
+  g.font = `italic bold ${Math.round(11 * S)}px Segoe UI, sans-serif`; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)';
+  for (const [t, x, z, c] of [['Karadeniz', 60, -122, '#1d5f86'], ['Boztepe', BOZTEPE.x, 22, '#17313a'], ['Melet Irmağı', riverX(215) + 44, 215, '#1d5f86']]) {
+    g.strokeText(t, ax(x), az(z)); g.fillStyle = c; g.fillText(t, ax(x), az(z));
   }
 }
 
@@ -431,7 +488,8 @@ export function compare(diffs, buildings) {
   return new Promise((resolve) => {
     if (!base) buildBase(buildings);
     const body = actOpen('Hasan Usta\'nın albümü: Neler değişmiş?',
-      'Soldaki fotoğraf kırk yıl önce, sağdaki bugün çekildi. "Bugün" fotoğrafında değişen üç yere dokun.');
+      'İlk fotoğraf kırk yıl önce, ikincisi bugün çekildi. Üç yer değişmiş: biri ırmak kenarında, biri Boztepe yamacında, biri güneydeki ormanda. "Bugün" fotoğrafında bu üç yere dokun.');
+    body.parentElement.classList.add('wide');
     const row = el('div', 'air-row'), list = el('ul', 'air-list'), note = el('p', 'act-note', 'Bulunan değişim: 0/3');
     const make = (title, old) => {
       const fig = el('figure', 'air'), cv = el('canvas');
@@ -443,17 +501,33 @@ export function compare(diffs, buildings) {
     };
     make('40 yıl önce', true);
     const cv = make('Bugün', false), g = cv.getContext('2d'), found = new Set();
-    let yanlis = 0;
+    let yanlis = 0, seri = 0, ipucu = -1;
     cv.classList.add('tap');
+    const ring = (d, color, dash) => {
+      g.strokeStyle = color; g.lineWidth = 4; g.setLineDash(dash ? [10, 7] : []);
+      g.beginPath(); g.arc((d.x - AIR.x0) * AIR.s, (d.z - AIR.z0) * AIR.s, d.r * AIR.s * 0.8, 0, 7); g.stroke(); g.setLineDash([]);
+    };
+    const redraw = () => {
+      drawAerial(cv, false, buildings);
+      for (const k of found) ring(diffs[k], '#e0392b');
+      if (ipucu >= 0 && !found.has(ipucu)) ring(diffs[ipucu], '#ffd23c', true);
+    };
     cv.onclick = (e) => {
       if (found.size === diffs.length) return;
       const [px, py] = canvasPos(cv, e), x = px / AIR.s + AIR.x0, z = py / AIR.s + AIR.z0;
       const k = diffs.findIndex((d) => Math.hypot(x - d.x, z - d.z) < d.r);
-      if (k < 0) { yanlis++; note.textContent = `Burada belirgin bir değişim yok. Tekrar bak! (Bulunan: ${found.size}/3)`; return; }
+      if (k < 0) {
+        yanlis++; seri++;
+        const kalan = diffs.findIndex((d, i) => !found.has(i));
+        // iki yanlış dokunuştan sonra yazılı ipucu, dördüncüden sonra sarı halka
+        if (seri >= 4) { ipucu = kalan; redraw(); }
+        note.textContent = `Burada belirgin bir değişim yok. ${seri >= 4 ? 'Sarı kesikli halkanın içine bak.' : seri >= 2 ? 'İpucu: ' + diffs[kalan].ipucu : 'Tekrar bak!'} (Bulunan: ${found.size}/3)`;
+        return;
+      }
       if (found.has(k)) return;
-      found.add(k);
+      found.add(k); seri = 0; ipucu = -1;
       const d = diffs[k];
-      g.strokeStyle = '#e0392b'; g.lineWidth = 3; g.beginPath(); g.arc((d.x - AIR.x0) * AIR.s, (d.z - AIR.z0) * AIR.s, d.r * AIR.s * 0.8, 0, 7); g.stroke();
+      redraw();
       list.appendChild(el('li', '', d.metin));
       note.textContent = `Bulunan değişim: ${found.size}/3`;
       if (found.size === diffs.length) actFinish('Üç değişimi de buldun! Şehir büyürken ırmak kenarına, yamaca ve ormanın içine doğru yayılmış.', resolve, { yanlis });

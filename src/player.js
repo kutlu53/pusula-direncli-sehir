@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { groundHeight, walkable } from './terrain.js';
 import { makeCharacter, animateCharacter } from './world.js';
 
-const WALK = 9, RUN = 17, GRAVITY = 30, JUMP = 10, RADIUS = 0.8;
+const WALK = 12, RUN = 22, GRAVITY = 30, JUMP = 10, RADIUS = 0.8;
 
 export class Player {
   constructor(scene, camera, colliders) {

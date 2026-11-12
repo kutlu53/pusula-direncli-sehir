@@ -1,6 +1,6 @@
 // 2. bölüm "Uydu Bakışı": Ordu'dan dünyaya uzaklaşma, Türkiye'nin çevresi, kıtalar-okyanuslar ve ızgaralı Türkiye haritası.
 // SB.6.2.1: ülkemizin, kıtaların ve okyanusların göreceli konumu ile ülkemizin mutlak konumu (belirle / görselleştir / özetle).
-import { actOpen, actFinish, canvasPos, el, show, getRelief } from './ui.js';
+import { actOpen, actFinish, canvasPos, el, show, getRelief, enableDrag } from './ui.js';
 import { TR, KARADENIZ, MARMARA, EGE_AKDENIZ, KIBRIS, KITALAR, IC_DENIZLER, drawPoly } from './geo.js';
 import { HALF, GEO, toGeo, degText } from './terrain.js';
 import { Sfx } from './audio.js';
@@ -193,35 +193,47 @@ export function labelMap(spec) {
     (dunya ? drawDunya : drawTurkiye)(cv.getContext('2d'));
     wrap.appendChild(cv);
     const pool = el('div', 'nb-pool'), check = el('button', '', 'Kontrol et');
+    // "sabit" adlar haritada hazır yazılıdır; öğrenci yalnız eksik olanları yerleştirir
+    const yuvalar = spec.yuvalar.filter((y) => !y.sabit);
+    for (const y of spec.yuvalar.filter((q) => q.sabit)) {
+      const [x, yy] = P(y.k), f = el('span', 'lm-fixed', y.ad);
+      f.style.left = (x / W * 100) + '%'; f.style.top = (yy / H * 100) + '%';
+      wrap.appendChild(f);
+    }
     const slots = [], placed = {};
     let picked = null;
-    const chips = spec.yuvalar.map((y) => y.ad).sort((a, b) => a.localeCompare(b, 'tr')).map((name) => {
+    const chips = yuvalar.map((y) => y.ad).sort((a, b) => a.localeCompare(b, 'tr')).map((name) => {
       const c = el('button', 'nb-chip', name);
-      c.onclick = () => { if (c.classList.contains('used')) return; picked = c; chips.forEach((o) => o.classList.toggle('sel', o === c)); };
+      c.onclick = () => { if (c.classList.contains('used')) return; picked = c; chips.forEach((o) => o.classList.toggle('sel', o === c)); body.classList.add('picking'); };
       pool.appendChild(c);
       return c;
     });
     const sync = () => { check.disabled = Object.keys(placed).length < chips.length; };
-    spec.yuvalar.forEach((y, i) => {
+    // Kutuya ad koy (chip boşsa kutuyu boşalt)
+    const put = (i, chip) => {
+      if (check.classList.contains('hidden')) return;
+      const b = slots[i];
+      if (placed[i]) { placed[i].classList.remove('used'); delete placed[i]; b.textContent = '?'; b.classList.remove('full'); }
+      if (chip) { placed[i] = chip; chip.classList.add('used'); b.textContent = chip.textContent; b.classList.add('full'); }
+      picked = null; chips.forEach((o) => o.classList.remove('sel')); body.classList.remove('picking');
+      sync();
+    };
+    yuvalar.forEach((y, i) => {
       const [x, yy] = P(y.k), b = el('button', 'lm-slot', '?');
       b.style.left = (x / W * 100) + '%'; b.style.top = (yy / H * 100) + '%';
-      b.dataset.dogru = y.ad;
-      b.onclick = () => {
-        if (check.classList.contains('hidden')) return;
-        if (placed[i]) { placed[i].classList.remove('used'); delete placed[i]; b.textContent = '?'; b.classList.remove('full'); }
-        if (picked) { placed[i] = picked; picked.classList.add('used'); picked.classList.remove('sel'); b.textContent = picked.textContent; b.classList.add('full'); picked = null; }
-        sync();
-      };
+      b.dataset.dogru = y.ad; b.dataset.i = i;
+      b.onclick = () => put(i, picked);
       slots.push(b); wrap.appendChild(b);
     });
+    enableDrag(chips, '.lm-slot', (c, slot) => put(+slot.dataset.i, c));
     check.onclick = () => {
       let n = 0;
       const yanit = {};
       slots.forEach((b, i) => {
-        const ok = placed[i].textContent === spec.yuvalar[i].ad;
-        yanit[spec.yuvalar[i].ad] = placed[i].textContent;
+        const ok = placed[i].textContent === yuvalar[i].ad;
+        yanit[yuvalar[i].ad] = placed[i].textContent;
         if (ok) n++;
-        b.classList.add(ok ? 'right' : 'wrong'); b.textContent = spec.yuvalar[i].ad;
+        b.classList.add(ok ? 'right' : 'wrong'); b.textContent = yuvalar[i].ad;
       });
       show(check, false); show(pool, false);
       actFinish(`${chips.length} addan ${n} tanesini doğru yerleştirdin. ${spec.aciklama}`, resolve, { dogru: n, toplam: chips.length, yanit });

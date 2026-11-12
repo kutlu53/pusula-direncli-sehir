@@ -62,7 +62,7 @@ export const PIER = { x: 0, z0: coastZ(0) - 50, z1: coastZ(0) + 4, half: 3.5, y:
 export const PLACES = {
   start: { x: 6, z: coastZ(6) + 16 },
   iskele: { x: 0, z: coastZ(0) - 12, ad: 'İskele' },
-  tasbasi: { x: -110, z: coastZ(-110) + 22, ad: 'Taşbaşı' },
+  tasbasi: { x: -110, z: coastZ(-110) + 22, ad: 'Taşbaşı Kilisesi' },
   kopru: { x: riverX(BRIDGE_Z), z: BRIDGE_Z, ad: 'Melet Köprüsü' },
   findik: { x: 60, z: 190, ad: 'Fındık Bahçesi' },
   boztepe: { x: BOZTEPE.x, z: BOZTEPE.z, ad: 'Boztepe' },

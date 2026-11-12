@@ -168,11 +168,24 @@ async function doActivity() {
     const names = await page.$$eval('.lm-slot', (l) => l.map((s) => s.dataset.dogru));
     const disabled = await page.$eval('#act-body > button', (b) => b.disabled);
     if (!disabled) report.hatalar.push('Konum: "Kontrol et" başta etkin olmamalıydı');
+    let surukledi = false;
     for (let i = 0; i < names.length; i++) {
       const name = names[i < 2 ? 1 - i : i];
       const chip = await page.evaluateHandle((n) => [...document.querySelectorAll('.nb-chip')].find((c) => c.textContent === n), name);
+      const slot = (await page.$$('.lm-slot'))[i];
+      await chip.evaluate((e) => e.scrollIntoView({ block: 'end' }));
+      const cb = await chip.boundingBox(), sb = await slot.boundingBox();
+      // bir adı fareyle sürükleyip bırak (ad ve kutu aynı anda ekrandaysa)
+      if (!TOUCH && !surukledi && i >= 2 && sb.y > 4 && cb.y + cb.height < 396) {
+        surukledi = true;
+        await page.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2); await page.mouse.down();
+        await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2, { steps: 8 }); await page.mouse.up();
+        if ((await slot.evaluate((e) => e.textContent)) !== name) report.hatalar.push('Konum: sürükle-bırak çalışmadı (' + name + ')');
+        else note('Sürükle-bırak çalıştı: ' + name);
+        continue;
+      }
       await chip.click();
-      await (await page.$$('.lm-slot'))[i].click();
+      await slot.click();
     }
     await shot('act_konum_' + names.length);
     await clickText('#act-body > button', 'Kontrol et');

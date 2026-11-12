@@ -38,14 +38,14 @@ export const STEPS = [
       aciklama: 'Ordu, Karadeniz kıyısında kuruludur ve deniz şehrin kuzeyindedir. Bu yüzden Ordu\'da denize bakan kişi kuzeye bakar.',
     },
     sonra: [
-      ['Hasan Usta', 'İlk parça Taşbaşı\'nda, eski taş binanın önünde. İskeleden çık, BATIYA doğru sahil boyunca yaklaşık 600 metre yürü.'],
+      ['Hasan Usta', 'İlk parça Taşbaşı Kilisesi\'nin önünde. Çan kuleli eski taş yapıyı uzaktan tanırsın. İskeleden çık, BATIYA doğru sahil boyunca yaklaşık 600 metre yürü.'],
       ['Hasan Usta', 'Yaklaşınca parçanın ışığını görürsün. Takılırsan ipucu isteyebilirsin. Öğrendiklerin Kâşif Defteri\'ne yazılacak.'],
     ],
   },
   {
     id: 'tasbasi', bolum: 1, hedef: PLACES.tasbasi, tur: 'parca', acar: [-450, 20, -450, 100],
-    gorev: 'Taşbaşı\'ndaki ilk harita parçasını bul (iskelenin batısı, ~600 m)',
-    once: [['Sen', 'İşte ilk parça! Kıyı çizgisi ve Boztepe\'nin etekleri çizilmiş.']],
+    gorev: 'Taşbaşı Kilisesi\'nin önündeki ilk harita parçasını bul (iskelenin batısı, ~600 m)',
+    once: [['Sen', 'İşte ilk parça! Kıyı çizgisi ve Boztepe\'nin etekleri çizilmiş. Arkamdaki taş yapı Taşbaşı Kilisesi; bugün kültür merkezi olarak kullanılıyor.']],
     soru: {
       id: 'B1S2', beceri: 'Harita okuma',
       metin: 'Haritalarda, başka bir işaret yoksa üst kenar hangi yönü gösterir?',
@@ -164,8 +164,6 @@ export const STEPS = [
         ], dogru: 1,
         aciklama: 'Atlas Okyanusu batıda Kuzey ve Güney Amerika, doğuda Avrupa ve Afrika arasındadır. Türkiye\'ye en yakın okyanus da Atlas Okyanusu\'dur; Akdeniz ona Cebelitarık Boğazı\'yla bağlanır.',
       } },
-      { diyalog: [['Hasan Usta (telsiz)', 'Haritaya bir daha bak: kıtalar ve okyanuslar birbirinin komşusudur. Hangisi kimin batısında, kimin arasında? Defterine yaz.']] },
-      { etkinlik: 'ozetKita' },
       { diyalog: [
         ['Hasan Usta (telsiz)', 'Buraya kadar hep "kuzeyinde, batısında" dedik; bu göreceli konumdu. Peki uzaydaki bir uydu Ordu\'yu nasıl bulur? Sayılarla!'],
         ['Hasan Usta (telsiz)', 'Dünyanın üzerinde çizgiler düşün. Ekvator\'a paralel çizgilere PARALEL denir, sayısına ENLEM. Kutuplardan geçen çizgilere MERİDYEN denir, sayısına BOYLAM.'],
@@ -181,9 +179,8 @@ export const STEPS = [
     ],
     sonra: [
       ['Hasan Usta (telsiz)', 'Artık drone ekranının köşesinde enlem ve boylam yazacak. Kuzeye uçunca enlem, doğuya uçunca boylam büyür; dene ve gör.'],
-      ['Hasan Usta (telsiz)', 'Haritacılar da uydular da yeri böyle bulur. Şimdi gördüklerini defterine kendi sözlerinle yaz.'],
+      ['Hasan Usta (telsiz)', 'Haritacılar da uydular da yeri böyle bulur. Gördüklerini bölümün sonunda defterine yazacaksın.'],
     ],
-    etkinlikler: ['ozetDunya'],
     kapanis: [
       ['Hasan Usta (telsiz)', 'Şimdi işe dönelim. Drone\'u kaldır ve albümde gördüğün üç riskli yeri bul: ırmak kenarındaki evler, dik yamaçtaki evler ve kesilen orman.'],
       ['Hasan Usta (telsiz)', 'Bulduğun yerin üzerine gel ve fotoğrafını çek! İpucu istersen sana yön ve koordinat veririm.'],
@@ -240,6 +237,7 @@ export const STEPS = [
   // ---------------- 3. BÖLÜM: KATMANLAR ----------------
   {
     id: 'masa', bolum: 3, hedef: PLACES.iskele, tur: 'npc',
+    ulasim: { x: PLACES.teleferik.x + 2, z: PLACES.teleferik.z + 9, yon: 80, metin: '🚡 Teleferikle Boztepe\'den sahile indin. İskele hemen doğuda.' },
     gorev: 'Fotoğrafları iskeledeki Hasan Usta\'ya götür',
     once: [
       ['Hasan Usta', 'Fotoğrafların harika, kâşif! Ama tek tek fotoğraf yetmez. Tehlikeyi görmek için bilgileri üst üste koymak gerekir.'],
@@ -303,6 +301,7 @@ export const STEPS = [
   },
   {
     id: 'kemal', bolum: 4, hedef: PLACES.kemal, tur: 'npc',
+    ulasim: { x: PLACES.kemal.x + 11, z: PLACES.kemal.z - 7, yon: 240, metin: '🚙 Elif Abla seni AFAD aracıyla Boztepe yamacına bıraktı. Kemal Bey birkaç adım ötede.' },
     gorev: 'Boztepe\'nin doğu yamacındaki evlerin yanında Kemal Bey\'i bul',
     once: [
       ['Kemal Bey', 'Sen de kimsin evlat? Ben Kemal, müteahhidim. Bu yamaçtaki evleri ben yaptım; şimdi yanlarına altı ev daha yapacağım.'],
@@ -337,6 +336,7 @@ export const STEPS = [
   // ---------------- 5. BÖLÜM: YENİDEN KUR ----------------
   {
     id: 'plan', bolum: 5, hedef: PLACES.afad, tur: 'npc',
+    ulasim: { x: PLACES.afad.x + 7, z: PLACES.afad.z + 10, yon: 325, metin: '🚙 Kemal Bey seni kamyonetiyle AFAD çadırına getirdi.' },
     gorev: 'AFAD çadırındaki planlama toplantısına katıl (Melet Köprüsü\'nün batı ucu)',
     once: [
       ['Elif Abla', 'Hoş geldin kâşif! Bugün büyük gün: belediye, şehrin yeni planını bizden istiyor. Hasan Usta ve Kemal Bey telsizde.'],
@@ -487,6 +487,7 @@ export const STEPS = [
   // "akis": sırayla oynatılan diyalog, etkinlik ve sorular
   {
     id: 'rota', bolum: 7, hedef: PLACES.iskele, tur: 'npc',
+    ulasim: { x: PLACES.start.x, z: PLACES.start.z, yon: 0, metin: '🚙 AFAD aracı seni iskelenin başına bıraktı. Hasan Usta iskelenin ucunda.' },
     gorev: 'İskeledeki Hasan Usta ile Ordu\'nun ilçelerine doğru yola çık',
     once: [
       ['Hasan Usta', 'Hazır mısın kâşif? Eski minibüsüm iskelenin başında. Bugün Altınordu\'dan çıkıp Ordu\'nun dört ilçesine gideceğiz.'],
@@ -560,6 +561,7 @@ export const STEPS = [
   },
   {
     id: 'final', bolum: 7, hedef: PLACES.boztepe, tur: 'nesne', etiket: 'Şehre bak',
+    ulasim: { x: BOZTEPE.x + 13, z: BOZTEPE.z - 21, yon: 215, metin: '🚡 Teleferikle Boztepe\'ye çıktın. Seyir terası birkaç adım yukarıda.' },
     gorev: 'Boztepe\'nin zirvesine çık ve şehre son bir kez bak',
     once: [
       ['Sen', 'İşte Altınordu: yeni okul, taşkın parkı, ağaçlanan yamaç... Haritadaki her işaretin bir hikâyesi var artık.'],
@@ -738,14 +740,32 @@ export const CLOZE = {
     ],
     serbest: 'Ordu\'yu hiç görmemiş bir arkadaşına şehrin yerini kendi cümlenle anlat:',
   },
+  // 2. bölümün tek defteri: değişim (SB.5.2.2) ve konum (SB.6.2.1c) özetleri bölüm sonunda birlikte yazılır
   ozet2: {
-    baslik: 'Şehirdeki değişimi özetle',
+    baslik: '2. bölümün özeti: Gökten Bakış',
     defter: 'Değişim özetim',
-    parcalar: [
-      'Kırk yılda şehir ', { sec: ['küçüldü', 'büyüdü'], dogru: 'büyüdü' }, '. Irmak kenarına yapılan evler ',
-      { sec: ['kuraklık', 'sel', 'çığ'], dogru: 'sel' }, ' tehlikesi altındadır. Dik yamaçlarda ağaçlar kesilirse ',
-      { sec: ['heyelan', 'kuraklık', 'hortum'], dogru: 'heyelan' }, ' riski artar. Ormanlar yağmur suyunu ',
-      { sec: ['hızlandırır', 'tutar'], dogru: 'tutar' }, ' ve toprağı korur.',
+    bolumler: [
+      {
+        kod: 'ozet2', ad: 'Şehirdeki değişim', defter: 'Değişim özetim',
+        parcalar: [
+          'Kırk yılda şehir ', { sec: ['küçüldü', 'büyüdü'], dogru: 'büyüdü' }, '. Irmak kenarına yapılan evler ',
+          { sec: ['kuraklık', 'sel', 'çığ'], dogru: 'sel' }, ' tehlikesi altındadır. Dik yamaçlarda ağaçlar kesilirse ',
+          { sec: ['heyelan', 'kuraklık', 'hortum'], dogru: 'heyelan' }, ' riski artar. Ormanlar yağmur suyunu ',
+          { sec: ['hızlandırır', 'tutar'], dogru: 'tutar' }, ' ve toprağı korur.',
+        ],
+      },
+      {
+        kod: 'ozetDunya', ad: 'Dünyadaki yerimiz', defter: 'Dünyadaki yerimiz', kazanim: 'SB.6.2.1c',
+        parcalar: [
+          'Türkiye, ', { sec: ['Asya ve Avrupa', 'Afrika ve Asya', 'Avrupa ve Afrika'], dogru: 'Asya ve Avrupa' }, ' kıtalarında yer alır; kuzeyinde ',
+          { sec: ['Akdeniz', 'Karadeniz', 'Ege Denizi'], dogru: 'Karadeniz' }, ' vardır. Avrupa\'nın güneyinde ',
+          { sec: ['Asya', 'Afrika', 'Avustralya'], dogru: 'Afrika' }, ' kıtası, Asya\'nın doğusunda ',
+          { sec: ['Atlas Okyanusu', 'Büyük Okyanus', 'Hint Okyanusu'], dogru: 'Büyük Okyanus' }, ' bulunur; bize en yakın okyanus ',
+          { sec: ['Hint Okyanusu', 'Atlas Okyanusu', 'Büyük Okyanus'], dogru: 'Atlas Okyanusu' }, '. Ülkemiz ',
+          { sec: ['36° - 42°', '26° - 45°'], dogru: '36° - 42°' }, ' kuzey paralelleri ile ',
+          { sec: ['36° - 42°', '26° - 45°'], dogru: '26° - 45°' }, ' doğu meridyenleri arasındadır.',
+        ],
+      },
     ],
     serbest: 'Sence şehir büyürken riskli yerlere ev yapılmaması için ne yapılmalı? Kendi cümlenle yaz:',
   },
@@ -802,22 +822,23 @@ CLOZE.ozet7 = {
 export const KONUM = {
   turkiye: {
     kod: 'B2E3', kazanim: 'SB.6.2.1b', harita: 'turkiye', baslik: 'Türkiye\'nin çevresi: denizler ve komşular', defter: 'Türkiye\'nin göreceli konumu',
-    giris: 'Önce aşağıdaki bir ada, sonra haritada o adın yerindeki kutuya dokun. Turuncu alan Türkiye, kırmızı nokta Ordu.',
+    giris: 'Yedi ad eksik. Adı sürükleyip haritadaki kutusuna bırak (ya da önce ada, sonra kutuya dokun). Turuncu alan Türkiye, kırmızı nokta Ordu.',
     yuvalar: [
-      { ad: 'Karadeniz', k: [34.5, 43.3] }, { ad: 'Ege Denizi', k: [25.0, 38.4] }, { ad: 'Akdeniz', k: [31.5, 34.4] }, { ad: 'Marmara Denizi', k: [28.3, 40.65] },
-      { ad: 'Yunanistan', k: [23.3, 39.6] }, { ad: 'Bulgaristan', k: [25.4, 42.6] }, { ad: 'Gürcistan', k: [43.4, 42.4] }, { ad: 'Ermenistan', k: [45.0, 40.4] },
-      { ad: 'İran', k: [45.6, 37.6] }, { ad: 'Irak', k: [43.0, 35.2] }, { ad: 'Suriye', k: [38.6, 34.6] },
+      { ad: 'Karadeniz', k: [34.5, 43.3] }, { ad: 'Ege Denizi', k: [25.0, 38.4] }, { ad: 'Akdeniz', k: [31.5, 34.4] },
+      { ad: 'Bulgaristan', k: [25.4, 42.6] }, { ad: 'Gürcistan', k: [43.4, 42.4] }, { ad: 'İran', k: [45.6, 37.6] }, { ad: 'Suriye', k: [38.6, 34.6] },
+      { ad: 'Marmara Denizi', k: [28.3, 40.65], sabit: true }, { ad: 'Yunanistan', k: [23.3, 39.6], sabit: true },
+      { ad: 'Ermenistan', k: [45.0, 40.4], sabit: true }, { ad: 'Irak', k: [43.0, 35.2], sabit: true },
     ],
     aciklama: 'Türkiye\'nin üç tarafı denizlerle çevrilidir: kuzeyde Karadeniz, batıda Ege Denizi, güneyde Akdeniz; Marmara Denizi iç denizimizdir. Komşularımız batıda Yunanistan ve Bulgaristan, doğuda Gürcistan, Ermenistan, Nahçıvan ve İran, güneyde Irak ve Suriye\'dir.',
   },
   dunya: {
     kod: 'B2E4', kazanim: 'SB.6.2.1b', harita: 'dunya', baslik: 'Kıtalar ve okyanuslar', defter: 'Kıtalar ve okyanuslar',
-    giris: 'Yedi kıta ve beş okyanusun adını haritada yerine koy. Kırmızı nokta Türkiye.',
+    giris: 'Dünyada yedi kıta ve beş okyanus var; yedisinin adı eksik. Adı sürükleyip haritadaki kutusuna bırak. Kırmızı nokta Türkiye.',
     yuvalar: [
-      { ad: 'Kuzey Amerika', k: [-100, 48] }, { ad: 'Güney Amerika', k: [-60, -16] }, { ad: 'Afrika', k: [20, 4] }, { ad: 'Avrupa', k: [12, 56] },
-      { ad: 'Asya', k: [95, 48] }, { ad: 'Avustralya', k: [134, -26] }, { ad: 'Antarktika', k: [40, -79] },
+      { ad: 'Kuzey Amerika', k: [-100, 48] }, { ad: 'Afrika', k: [20, 4] }, { ad: 'Avrupa', k: [12, 56] }, { ad: 'Asya', k: [95, 48] },
       { ad: 'Büyük Okyanus', k: [-150, 4] }, { ad: 'Atlas Okyanusu', k: [-35, 22] }, { ad: 'Hint Okyanusu', k: [78, -24] },
-      { ad: 'Kuzey Buz Denizi', k: [110, 84] }, { ad: 'Güney Okyanusu', k: [-30, -58] },
+      { ad: 'Güney Amerika', k: [-60, -16], sabit: true }, { ad: 'Avustralya', k: [134, -26], sabit: true }, { ad: 'Antarktika', k: [40, -79], sabit: true },
+      { ad: 'Kuzey Buz Denizi', k: [110, 84], sabit: true }, { ad: 'Güney Okyanusu', k: [-30, -58], sabit: true },
     ],
     aciklama: 'Dünyada yedi kıta (Asya, Avrupa, Afrika, Kuzey Amerika, Güney Amerika, Avustralya, Antarktika) ve beş okyanus (Büyük, Atlas, Hint, Kuzey Buz Denizi, Güney Okyanusu) vardır. Türkiye, Asya ile Avrupa\'nın birleştiği yerdedir; bize en yakın okyanus Atlas Okyanusu\'dur.',
   },
@@ -827,47 +848,15 @@ export const KOORDINAT = {
   kod: 'B2E5', kazanim: 'SB.6.2.1a', tol: 1.3,
   giris: 'Izgaradaki sayılar enlem (° K) ve boylam (° D). İstenen noktaya dokun; dokunduğun yerin koordinatı altta yazar.',
   gorevler: [
-    { metin: 'Türkiye\'nin en GÜNEY ucuna dokun', k: [36.2, 35.9], etiket: '36° K', sonuc: 'En güney nokta 36° kuzey paralelinde (Hatay).', ipucu: 'Daha güneye, Akdeniz\'in doğu ucuna bak.' },
-    { metin: 'Türkiye\'nin en KUZEY ucuna dokun', k: [35.0, 42.1], etiket: '42° K', sonuc: 'En kuzey nokta 42° kuzey paralelinde (Sinop).', ipucu: 'Karadeniz\'e en çok sokulan burnu bul.' },
-    { metin: 'Türkiye\'nin en BATI ucuna dokun', k: [26.0, 40.0], etiket: '26° D', sonuc: 'En batı nokta 26° doğu meridyeninde (Gökçeada).', ipucu: 'Ege Denizi\'nin kuzeyine, en sol uca bak.' },
-    { metin: 'Türkiye\'nin en DOĞU ucuna dokun', k: [44.8, 39.7], etiket: '45° D', sonuc: 'En doğu nokta 45° doğu meridyeninde (Iğdır).', ipucu: 'Haritanın sağ ucuna, Ermenistan ile İran\'ın arasına bak.' },
+    { metin: 'Türkiye\'nin en KUZEY ucuna dokun', k: [35.0, 42.1], etiket: '42° K', sonuc: 'En kuzey nokta 42° kuzey paralelinde (Sinop). En güney nokta ise 36° kuzey paralelindedir (Hatay).', ipucu: 'Karadeniz\'e en çok sokulan burnu bul.' },
+    { metin: 'Türkiye\'nin en DOĞU ucuna dokun', k: [44.8, 39.7], etiket: '45° D', sonuc: 'En doğu nokta 45° doğu meridyeninde (Iğdır). En batı nokta ise 26° doğu meridyenindedir (Gökçeada).', ipucu: 'Haritanın sağ ucuna, Ermenistan ile İran\'ın arasına bak.' },
     { metin: 'Şimdi ORDU\'ya dokun ve koordinatını oku', k: [37.88, 40.985], etiket: '41° K, 38° D', sonuc: 'Ordu yaklaşık 41° K enlemi ile 38° D boylamındadır.', ipucu: 'Kırmızı nokta Ordu; Karadeniz kıyısının ortasında.' },
   ],
   bitis: 'Türkiye 36° - 42° kuzey paralelleri ile 26° - 45° doğu meridyenleri arasındadır. Bu sayılar ülkemizin mutlak konumudur; dünyanın her yeri için böyle iki sayı vardır.',
 };
 
-CLOZE.ozetKita = {
-  baslik: 'Kıtaların ve okyanusların komşuluğunu özetle',
-  defter: 'Kıtalar ve okyanuslar nerede?',
-  kazanim: 'SB.6.2.1c',
-  parcalar: [
-    'Avrupa, Asya\'nın ', { sec: ['batısında', 'doğusunda', 'güneyinde'], dogru: 'batısında' }, '; Afrika ise Avrupa\'nın ',
-    { sec: ['kuzeyinde', 'güneyinde', 'doğusunda'], dogru: 'güneyinde' }, ' yer alır. Asya\'nın doğusunda ',
-    { sec: ['Atlas Okyanusu', 'Büyük Okyanus', 'Hint Okyanusu'], dogru: 'Büyük Okyanus' }, ', güneyinde ',
-    { sec: ['Hint Okyanusu', 'Kuzey Buz Denizi', 'Atlas Okyanusu'], dogru: 'Hint Okyanusu' }, ' vardır. Afrika ile Güney Amerika\'nın arasında ',
-    { sec: ['Büyük Okyanus', 'Atlas Okyanusu', 'Güney Okyanusu'], dogru: 'Atlas Okyanusu' }, ', en güneyde Antarktika\'nın çevresinde ',
-    { sec: ['Güney Okyanusu', 'Kuzey Buz Denizi'], dogru: 'Güney Okyanusu' }, ' bulunur.',
-  ],
-  serbest: 'Avustralya\'nın yerini, komşu okyanus ve kıtalarını söyleyerek bir cümleyle anlat:',
-};
-
-CLOZE.ozetDunya = {
-  baslik: 'Dünyadaki yerimizi özetle',
-  defter: 'Dünyadaki yerimiz',
-  kazanim: 'SB.6.2.1c',
-  parcalar: [
-    'Türkiye, ', { sec: ['Asya ve Avrupa', 'Afrika ve Asya', 'Avrupa ve Afrika'], dogru: 'Asya ve Avrupa' }, ' kıtalarında yer alır; kuzeyinde ',
-    { sec: ['Akdeniz', 'Karadeniz', 'Ege Denizi'], dogru: 'Karadeniz' }, ', güneyinde ', { sec: ['Akdeniz', 'Karadeniz'], dogru: 'Akdeniz' },
-    ' vardır. Ülkemiz ', { sec: ['36° - 42°', '26° - 45°'], dogru: '36° - 42°' }, ' kuzey paralelleri ile ',
-    { sec: ['36° - 42°', '26° - 45°'], dogru: '26° - 45°' }, ' doğu meridyenleri arasındadır. Dünyada ',
-    { sec: ['5', '7', '9'], dogru: '7' }, ' kıta ve ', { sec: ['3', '5', '7'], dogru: '5' }, ' okyanus vardır; bize en yakın okyanus ',
-    { sec: ['Hint Okyanusu', 'Atlas Okyanusu', 'Büyük Okyanus'], dogru: 'Atlas Okyanusu' }, '.',
-  ],
-  serbest: 'Uzaydan gelen bir konuğa Türkiye\'nin dünyadaki yerini kendi cümlenle anlat:',
-};
-
 export const FARKLAR = [
-  { ...RISKS.taskin, r: 48, metin: 'Irmak kenarı: Eskiden boş olan taşkın yatağına evler yapılmış.' },
-  { ...RISKS.yamac, r: 40, metin: 'Boztepe yamacı: Ağaçlar kesilmiş, dik yamaca evler yapılmış.' },
-  { ...RISKS.orman, r: 48, metin: 'Güney yamaçlar: Orman kesilip açılmış, yerine birkaç ev yapılmış.' },
+  { ...RISKS.taskin, r: 52, ipucu: 'Irmak kenarına, köprünün güneyine bak.', metin: 'Irmak kenarı: Eskiden boş olan taşkın yatağına evler yapılmış.' },
+  { ...RISKS.yamac, r: 46, ipucu: 'Boztepe\'nin doğu yamacına bak.', metin: 'Boztepe yamacı: Ağaçlar kesilmiş, dik yamaca evler yapılmış.' },
+  { ...RISKS.orman, r: 50, ipucu: 'Güneydeki ormanlık yamaçlara bak.', metin: 'Güney yamaçlar: Orman kesilip açılmış, yerine birkaç ev yapılmış.' },
 ];

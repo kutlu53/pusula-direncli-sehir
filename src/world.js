@@ -17,6 +17,33 @@ function box(w, h, d, mat, x, y, z) {
   return m;
 }
 
+// Beşik çatı / çadır gövdesi: tabanı w, yüksekliği h, uzunluğu len olan üçgen prizma (sırtı z ekseni boyunca)
+function prism(w, h, len, mat, x, y, z) {
+  const geo = new THREE.CylinderGeometry(1, 1, 1, 3, 1).rotateX(-Math.PI / 2).translate(0, 0.5, 0).scale(w / 1.732, h / 1.5, len);
+  const m = shadowed(new THREE.Mesh(geo, mat));
+  m.position.set(x, y, z);
+  return m;
+}
+// Yazılı tabela: ön ve arka yüzünde aynı yazı okunur
+function signBoard(text, w, h, bg, fg, x, y, z) {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = Math.round(512 * h / w);
+  const g = cv.getContext('2d');
+  g.fillStyle = bg; g.fillRect(0, 0, cv.width, cv.height);
+  g.strokeStyle = fg; g.lineWidth = 10; g.strokeRect(8, 8, cv.width - 16, cv.height - 16);
+  g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+  let size = cv.height * 0.6;
+  g.font = `bold ${size}px Segoe UI, Arial, sans-serif`;
+  while (g.measureText(text).width > cv.width - 50) { size -= 4; g.font = `bold ${size}px Segoe UI, Arial, sans-serif`; }
+  g.fillText(text, cv.width / 2, cv.height / 2 + size * 0.04);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.MeshStandardMaterial({ map: t, roughness: 0.8 }), edge = std(0x4a5258);
+  const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.18), [edge, edge, edge, edge, face, face]));
+  m.position.set(x, y, z);
+  return m;
+}
+
 // ---------- Karakter (oyuncu ve Hasan Usta aynı iskeleti kullanır) ----------
 export function makeCharacter({ shirt, pants, skin = 0xe8b890, hair, pack }) {
   const g = new THREE.Group();
@@ -145,12 +172,12 @@ function buildCity(scene, colliders, avoid) {
   for (let x = -150; x <= 335; x += 13) for (let s = 22; s <= 152; s += 13) {
     k++;
     const i = Math.round((x + 150) / 13), j = Math.round((s - 22) / 13);
-    if (i % 5 === 0 || j % 4 === 3) continue; // sokaklar
+    if (i % 4 === 0 || j % 3 === 2) continue; // sokaklar (geniş caddeler: oyuncu binalar arasında sıkışmasın)
     const px = x + (rand(k, 1) - 0.5) * 3, pz = coastZ(x) + s + (rand(k, 2) - 0.5) * 3;
     const h0 = terrainHeight(px, pz);
     if (h0 < 1.3 || h0 > 9 || Math.abs(px - riverX(pz)) < 27) continue;
     if (avoid.some((a) => Math.hypot(a.x - px, a.z - pz) < a.r)) continue;
-    const w = 8 + rand(k, 3) * 3.5, d = 8 + rand(k, 4) * 3.5;
+    const w = 7 + rand(k, 3) * 2.5, d = 7 + rand(k, 4) * 2.5;
     const center = Math.exp(-(((px - 60) / 120) ** 2));
     const h = 4.5 + rand(k, 5) * 5 + center * rand(k, 6) * 9;
     list.push({ x: px, z: pz, w, d, h, y: h0 - 0.5, color: palette[Math.floor(rand(k, 7) * palette.length)] });
@@ -309,17 +336,58 @@ function buildLandmarks(scene, colliders) {
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), new THREE.MeshBasicMaterial({ color: 0xfff2b0 }));
   lamp.position.set(fx, PIER.y + 6.5, fz);
   scene.add(lamp);
+  // Korkuluklar, giriş takı ve "İSKELE" tabelası: iskele uzaktan tanınsın
+  const rope = std(0xf4f1ea);
+  for (const sx of [-1, 1]) {
+    const rx = PIER.x + sx * (PIER.half - 0.15);
+    scene.add(box(0.14, 0.14, pierLen - 1, rope, rx, PIER.y + 1.15, pierMid), box(0.1, 0.1, pierLen - 1, rope, rx, PIER.y + 0.62, pierMid));
+    for (let z = PIER.z0 + 1; z <= PIER.z1; z += 4) scene.add(box(0.22, 1.25, 0.22, wood, rx, PIER.y + 0.6, z));
+  }
+  const gz = PIER.z1 + 1.5, gy = terrainHeight(PIER.x, gz);
+  for (const sx of [-1, 1]) scene.add(box(0.5, 6.4, 0.5, wood, PIER.x + sx * (PIER.half + 0.6), gy + 3.2, gz));
+  scene.add(signBoard('⚓ İSKELE', 8.6, 1.9, '#0c5a5c', '#ffffff', PIER.x, gy + 5.6, gz));
+  for (const [sx, bz, color] of [[-1, PIER.z0 + 30, 0x2f6f9f], [1, PIER.z0 + 20, 0xc94f3a], [-1, PIER.z0 + 12, 0xe0a52f]]) {
+    const b = new THREE.Group();
+    b.add(box(2, 0.9, 5.2, std(color), 0, 0.3, 0), box(1.5, 0.25, 4.4, std(0xf4f1ea), 0, 0.72, 0), box(0.1, 2.4, 0.1, wood, 0, 1.6, -0.8));
+    b.position.set(PIER.x + sx * (PIER.half + 2.4), 0, bz);
+    scene.add(b);
+  }
 
-  // Taşbaşı: eski taş bina
+  // Taşbaşı Kilisesi (bugün kültür merkezi): taş nef, beşik çatı, kemerli pencereler, çan kulesi ve apsis
   const T = PLACES.tasbasi, tx = T.x - 13, tz = T.z + 9, ty = terrainHeight(tx, tz);
-  scene.add(box(12, 7, 16, stone, tx, ty + 3, tz));
-  const gable = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.01, 7.4, 3.2, 4, 1).rotateY(Math.PI / 4), std(0x9a4a35)));
-  gable.scale.set(1, 1, 1.35); gable.position.set(tx, ty + 8.1, tz);
-  scene.add(gable, box(3.2, 12, 3.2, stone, tx + 3.5, ty + 6, tz - 8.5));
-  const dome = shadowed(new THREE.Mesh(new THREE.ConeGeometry(2.6, 3, 4).rotateY(Math.PI / 4), std(0x9a4a35)));
-  dome.position.set(tx + 3.5, ty + 13.5, tz - 8.5);
-  scene.add(dome);
-  solid(tx, tz, 12, 16); solid(tx + 3.5, tz - 8.5, 3.2, 3.2);
+  const tile = std(0x9a4a35), dark = std(0x3a2f2a), trim = std(0xd9cdb4);
+  scene.add(box(12, 8, 16, stone, tx, ty + 3.5, tz), prism(13, 4, 17, tile, tx, ty + 7.5, tz));
+  scene.add(box(12.4, 0.5, 16.4, trim, tx, ty + 7.4, tz));
+  scene.add(box(12.6, 6, 16.6, stone, tx, ty - 3, tz), box(3.8, 6, 3.8, stone, tx + 3.5, ty - 3, tz - 8.5)); // yamaçta temel
+  for (const sx of [-1, 1]) for (let i = -2; i <= 2; i++) { // yan cephelerde kemerli pencereler
+    const wz = tz + i * 3, wx = tx + sx * 6.02;
+    scene.add(box(0.12, 3, 1.1, dark, wx, ty + 4, wz));
+    const arch = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(Math.PI / 2), dark);
+    arch.rotation.y = 0; arch.position.set(wx, ty + 5.5, wz);
+    scene.add(arch);
+  }
+  // doğu ucunda yarım daire apsis, batı ucunda kemerli kapı ve yuvarlak pencere
+  const apse = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 6.5, 18, 1, false, -Math.PI / 2, Math.PI), stone));
+  apse.position.set(tx, ty + 2.75, tz + 8);
+  const apseRoof = shadowed(new THREE.Mesh(new THREE.SphereGeometry(3.5, 18, 8, -Math.PI / 2, Math.PI, 0, Math.PI / 2), tile));
+  apseRoof.scale.y = 0.55; apseRoof.position.set(tx, ty + 6, tz + 8);
+  scene.add(apse, apseRoof);
+  scene.add(box(2.4, 3.6, 0.14, dark, tx - 2.2, ty + 1.8, tz - 8.05));
+  const rose = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.14, 20).rotateX(Math.PI / 2), dark);
+  rose.position.set(tx - 2.2, ty + 6.2, tz - 8.05);
+  scene.add(rose);
+  // çan kulesi
+  const kx = tx + 3.5, kz = tz - 8.5;
+  scene.add(box(3.4, 13, 3.4, stone, kx, ty + 6, kz), box(3.9, 0.5, 3.9, trim, kx, ty + 9.2, kz), box(3.9, 0.5, 3.9, trim, kx, ty + 12.5, kz));
+  for (const [dx, dz, w, d] of [[0, -1.72, 1.2, 0.12], [0, 1.72, 1.2, 0.12], [-1.72, 0, 0.12, 1.2], [1.72, 0, 0.12, 1.2]]) scene.add(box(w, 2.2, d, dark, kx + dx, ty + 10.9, kz + dz));
+  const spire = shadowed(new THREE.Mesh(new THREE.ConeGeometry(2.7, 4, 4).rotateY(Math.PI / 4), tile));
+  spire.position.set(kx, ty + 14.75, kz);
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(0xc9a23a, { metalness: 0.6, roughness: 0.4 }));
+  bell.position.set(kx, ty + 10.6, kz);
+  scene.add(spire, bell);
+  // önündeki tabela (parçanın durduğu avluya bakar)
+  scene.add(box(0.25, 3, 0.25, wood, tx + 9.5, ty + 1.5, tz - 12), signBoard('TAŞBAŞI KİLİSESİ', 7, 1.5, '#f6efdc', '#17313a', tx + 9.5, ty + 3.4, tz - 12));
+  solid(tx, tz, 12, 16); solid(kx, kz, 3.4, 3.4);
 
   // Melet Köprüsü
   const K = PLACES.kopru, segN = 20, segW = (BRIDGE_HALF * 2) / segN;
@@ -508,9 +576,14 @@ export function buildWorld({ lowGfx = false } = {}) {
 
   // 4. bölüm karakterleri: AFAD gönüllüsü Elif (çadırıyla) ve müteahhit Kemal Bey
   const A = PLACES.afad, ay = terrainHeight(A.x, A.z);
-  const tent = shadowed(new THREE.Mesh(new THREE.ConeGeometry(4.2, 3.6, 4).rotateY(Math.PI / 4), std(0xe8741c)));
-  tent.position.set(A.x - 6, ay + 1.8, A.z + 3);
-  scene.add(tent, box(2.2, 1, 1.2, std(0xf4f1ea), A.x + 2.6, ay + 0.5, A.z + 1));
+  // Beşik çatılı AFAD çadırı: turuncu gövde, beyaz şerit, kapı açıklığı, tabela ve bayrak
+  const cx = A.x - 6.5, cz = A.z + 4, orange = std(0xe8741c), canvasW = std(0xf4f1ea);
+  scene.add(prism(7.4, 4.4, 9, orange, cx, ay, cz), prism(7.7, 1.25, 9.2, canvasW, cx, ay + 3.3, cz));
+  scene.add(prism(2.6, 3, 0.3, std(0x3a2a1e), cx, ay, cz - 4.45), prism(2.6, 3, 0.3, std(0x3a2a1e), cx, ay, cz + 4.45));
+  for (const [dx, dz] of [[-4.6, -4], [4.6, -4], [-4.6, 4], [4.6, 4]]) scene.add(box(0.12, 0.5, 0.12, std(0x6b4a2e), cx + dx, ay + 0.25, cz + dz));
+  scene.add(signBoard('AFAD', 3.6, 1.3, '#1f4fa0', '#ffffff', cx, ay + 5.2, cz - 4.6), box(0.16, 1.2, 0.16, std(0x4a5258), cx, ay + 4.5, cz - 4.6));
+  scene.add(box(0.16, 7, 0.16, canvasW, cx + 5.4, ay + 3.5, cz - 4.6), box(2.4, 1.5, 0.08, std(0x1f4fa0), cx + 6.7, ay + 6.2, cz - 4.6));
+  scene.add(box(2.2, 1, 1.2, canvasW, A.x + 2.6, ay + 0.5, A.z + 1), box(0.9, 0.7, 0.7, std(0xc23b2e), A.x + 2.6, ay + 1.35, A.z + 1));
   const elif = makeCharacter({ shirt: 0xe8741c, pants: 0x2d3a55, hair: 0x2a1a12 });
   elif.position.set(A.x, ay, A.z);
   elif.rotation.y = Math.PI * 0.75;
@@ -520,14 +593,37 @@ export function buildWorld({ lowGfx = false } = {}) {
   kemal.rotation.y = -Math.PI / 2;
   scene.add(elif, kemal);
 
+  // Şehirliler: yanlarından geçen oyuncuya selam verir, şehirle ilgili kısa şeyler söyler
+  const shirtC = [0xc94f3a, 0x2f6f9f, 0xe0a52f, 0x7a5ac0, 0x3f9a4a, 0xd97aa0, 0x4f8f8f, 0xb86a3a], hairC = [0x2a1a12, 0x4a2f1e, 0x1c1c1c, 0xb9b9b9];
+  const shore = (x, s = 6) => ({ x, z: coastZ(x) + s });
+  const citizens = [
+    { ...shore(22), soz: ['Merhaba kâşif! Hasan Usta iskelenin ucunda, balık tutmayı da sever.', 'Kolay gelsin evladım!'] },
+    { ...shore(-30), soz: ['Merhaba! Teleferikle Boztepe\'ye çıktın mı? Manzarası çok güzeldir.', 'İyi günler kâşif!'] },
+    { ...shore(-95), soz: ['Hoş geldin! Taşbaşı Kilisesi yüz yıldan eski; şimdi kültür merkezi.', 'Merhaba, kolay gelsin!'] },
+    { ...shore(75), soz: ['Merhaba! Denize bakıyorsan kuzeye bakıyorsun, unutma.', 'Selam kâşif, yolun açık olsun!'] },
+    { ...shore(135), soz: ['Merhaba! Melet Irmağı çok yağmurda kabarır; kenarına ev yapılmaz.', 'İyi gezmeler!'] },
+    { ...shore(190), soz: ['Selam! Köprü az ileride, ırmağın üstünde.', 'Merhaba kâşif!'] },
+    { x: BOZTEPE.x - 5, z: BOZTEPE.z + 4.5, soz: ['Merhaba! Buradan bütün Ordu görünüyor, değil mi?', 'Hoş geldin Boztepe\'ye!'] },
+    { x: PLACES.findik.x + 9, z: PLACES.findik.z - 3, soz: ['Merhaba evladım! Ordu\'nun fındığı dünyaca meşhurdur.', 'Kolay gelsin kâşif!'] },
+    { x: PLACES.kopru.x - 36, z: BRIDGE_Z - 9, soz: ['Merhaba! Yağmur çok yağınca köprüden ırmağı izlemek tehlikelidir.', 'Selam kâşif!'] },
+  ];
+  citizens.forEach((c, i) => {
+    const m = makeCharacter({ shirt: shirtC[i % 8], pants: i % 2 ? 0x3d4654 : 0x2d3a55, hair: hairC[i % 4] });
+    if (i % 4 === 3) m.scale.setScalar(0.62); // çocuk
+    m.position.set(c.x, groundHeight(c.x, c.z), c.z);
+    m.rotation.y = rand(i, 99) * 6.28;
+    scene.add(m);
+    c.model = m; c.y = m.position.y + (i % 4 === 3 ? 1.75 : 2.35);
+  });
+
   // Hedef işareti: harita parçası + ışık sütunu
   const marker = new THREE.Group();
   const piece = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 1.1),
     new THREE.MeshStandardMaterial({ color: 0xf2d27a, emissive: 0xd9a520, emissiveIntensity: 0.8 }));
   piece.position.y = 1.8; piece.rotation.x = 0.5;
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 60, 16, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xd9a020, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-  beam.position.y = 30;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 70, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xd9a020, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  beam.position.y = 35;
   marker.add(piece, beam);
   marker.visible = false;
   scene.add(marker);
@@ -558,7 +654,7 @@ export function buildWorld({ lowGfx = false } = {}) {
   const devices = [], planObjs = [], planCols = [];
 
   return {
-    scene, colliders, buildings, sun,
+    scene, colliders, buildings, sun, citizens,
     setTarget(p, showPiece) {
       marker.userData.active = !!p;
       if (p) { marker.position.set(p.x, groundHeight(p.x, p.z), p.z); piece.visible = showPiece; }
@@ -683,7 +779,7 @@ export function buildWorld({ lowGfx = false } = {}) {
       sun.target.position.copy(playerPos);
       piece.rotation.y += dt * 1.6;
       piece.position.y = 1.8 + Math.sin(t * 2) * 0.25;
-      beam.material.opacity = 0.1 + 0.04 * Math.sin(t * 3);
+      beam.material.opacity = 0.3 + 0.1 * Math.sin(t * 3);
       cabins.forEach((c, i) => {
         const u = (t * 0.02 + i / 4) % 1, f = u < 0.5 ? u * 2 : 2 - u * 2;
         c.position.copy(curve.getPoint(f));
@@ -697,7 +793,7 @@ export function buildWorld({ lowGfx = false } = {}) {
         u.l.rotation.y = Math.sin(t * 7 + u.ph) * 0.5; u.r.rotation.y = -u.l.rotation.y;
       });
       // Karakterler hafifçe kıpırdar ve yakındaki oyuncuya döner
-      for (const [i, m] of [usta, elif, kemal, ...people].entries()) {
+      for (const [i, m] of [usta, elif, kemal, ...people, ...citizens.map((c) => c.model)].entries()) {
         animateCharacter(m, t * 1.6 + i, 0.07);
         const dx = playerPos.x - m.position.x, dz = playerPos.z - m.position.z;
         if (dx * dx + dz * dz < 500) {

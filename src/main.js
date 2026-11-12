@@ -340,9 +340,14 @@ async function runActs(s, names, veri = {}) {
       note('Kırk yılda değişenler', FARKLAR.map((f) => f.metin).join(' '));
     } else {
       const spec = CLOZE[name], r = await ui.cloze(spec);
-      log({ olay: 'ozet', soru: name, kazanim: spec.kazanim, dogru: `${r.dogru}/${r.toplam}`, adim: s.id, metin: r.serbest });
+      // Bölüm sonu defterinde birden çok özet varsa her biri kendi kodu ve kazanımıyla kaydedilir
+      const parcalar = r.bolumler || [{ kod: name, kazanim: spec.kazanim, defter: spec.defter, dogru: r.dogru, toplam: r.toplam, cumle: r.cumle }];
+      parcalar.forEach((b, i) => {
+        const serbest = i === 0 ? r.serbest : '';
+        log({ olay: 'ozet', soru: b.kod, kazanim: b.kazanim, dogru: `${b.dogru}/${b.toplam}`, adim: s.id, metin: serbest });
+        note(b.defter, b.cumle + (serbest ? ' ✍️ Kendi cümlem: ' + serbest : ''));
+      });
       state.score += r.dogru * 15 + (r.serbest.length > 15 ? 30 : 0);
-      note(spec.defter, r.cumle + (r.serbest ? ' ✍️ Kendi cümlem: ' + r.serbest : ''));
     }
     refresh();
   }
@@ -354,9 +359,22 @@ async function finishStep(s) {
   if (s.kapanis) await ui.dialog(s.kapanis);
   if (s.tur === 'parca') { Sfx.pickup(); world.burst(s.hedef.x, s.hedef.z); }
   state.step++;
+  const yolMesaji = travel(STEPS[state.step]);
   save(); refresh();
   if (STEPS[state.step] && STEPS[state.step].id === 'alarm') Sfx.alarm();
-  if (s.bolumSonu) showEnd(s.bolumSonu); else mode = 'play';
+  if (s.bolumSonu) { bekleyenMesaj = yolMesaji; showEnd(s.bolumSonu); }
+  else { mode = 'play'; if (yolMesaji) ui.toast(yolMesaji, 7000); }
+}
+
+// Hızlı ulaşım: sıradaki hedef uzaktaysa oyuncu teleferik ya da araçla hedefin yakınına bırakılır (uzun geri dönüş yürüyüşleri yok)
+let bekleyenMesaj = '';
+function travel(s) {
+  const h = s && s.ulasim && hedefOf(s);
+  if (!h || Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 90) return '';
+  player.place(s.ulasim.x, s.ulasim.z, (s.ulasim.yon || 0) * Math.PI / 180);
+  ui.flash();
+  log({ olay: 'ulasim', adim: s.id });
+  return s.ulasim.metin;
 }
 
 async function interact() {
@@ -467,7 +485,7 @@ addEventListener('click', (e) => { if (e.target.closest('button')) Sfx.click(); 
 $('menu-resume').onclick = () => closeOverlay('menu');
 $('menu-csv').onclick = $('end-csv').onclick = () => Log.download();
 $('menu-restart').onclick = () => { Log.clearSave(); ui.showPanel('menu', false); begin(null); };
-$('end-free').onclick = () => closeOverlay('end');
+$('end-free').onclick = () => { closeOverlay('end'); if (bekleyenMesaj) { ui.toast(bekleyenMesaj, 7000); bekleyenMesaj = ''; } };
 if (Log.load()) $('continue').classList.remove('hidden');
 
 // Otomatik oynanış testi için durum erişimi (?test=1)
@@ -509,6 +527,28 @@ function adaptQuality(rawDt) {
   else if (world.sun.castShadow) world.sun.castShadow = false;
 }
 const origin = new THREE.Vector3();
+// Şehirliler: yaklaşınca selam verir (baş üstünde konuşma balonu)
+const bubble = $('bubble'), bubblePos = new THREE.Vector3();
+let konusan = null, sozNo = 0;
+function updateBubble(playing) {
+  let near = null;
+  if (playing && !drone.active) for (const c of world.citizens) if (Math.hypot(c.x - player.pos.x, c.z - player.pos.z) < 9) { near = c; break; }
+  if (near !== konusan) {
+    konusan = near;
+    if (near) {
+      const st = step(), firtina = st && st.firtina;
+      bubble.textContent = firtina ? 'Yağmur çok şiddetlendi! Ben toplanma alanına gidiyorum, sen de dikkat et!' : near.soz[sozNo++ % near.soz.length];
+      Sfx.talk();
+    }
+    ui.showPanel('bubble', !!near);
+  }
+  if (!near) return;
+  bubblePos.set(near.x, near.y, near.z).project(camera);
+  const gorunur = bubblePos.z < 1 && Math.abs(bubblePos.x) < 1.05 && Math.abs(bubblePos.y) < 1.05;
+  bubble.style.visibility = gorunur ? 'visible' : 'hidden';
+  bubble.style.left = ((bubblePos.x + 1) / 2 * innerWidth) + 'px';
+  bubble.style.top = ((1 - bubblePos.y) / 2 * innerHeight - 8) + 'px';
+}
 renderer.setAnimationLoop(() => {
   const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), t = clock.elapsedTime;
   if (document.visibilityState === 'visible' && rawDt < 1) adaptQuality(rawDt);
@@ -524,6 +564,7 @@ renderer.setAnimationLoop(() => {
     if (drone.active) drone.update(dt, playing ? keys : {});
     world.update(dt, t, drone.active ? drone.focus : player.pos, drone.active, camera.position);
     ui.updateCompass(player.headingDeg);
+    updateBubble(playing);
     if (drone.active) $('drone-gps').textContent = geoText(drone.pos.x, drone.pos.z);
     // Ortam sesleri: kıyıya yakınken deniz, fırtınada yağmur; adım sesleri
     const st0 = step(), kiyi = Math.max(0, 1 - Math.abs(player.pos.z - coastZ(player.pos.x)) / 140);

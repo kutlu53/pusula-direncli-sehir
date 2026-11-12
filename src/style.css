@@ -190,6 +190,7 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 #flash.go { display: block; inset: 0; background: #fff; animation: flash .45s ease-out forwards; }
 @keyframes flash { from { opacity: .9; } to { opacity: 0; } }
 @media (max-width: 600px) { .air-row { flex-direction: column; } }
+@media (max-height: 480px) { .act-panel.wide .air-row { max-width: 100%; } }
 @media (max-height: 480px) {
   .act-canvas { width: min(100%, 60vh); }
   .act-turkey { display: none; }
@@ -205,13 +206,14 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 .koor-canvas { width: min(100%, 92vh); }
 .lm-wrap { position: relative; width: min(100%, 640px); margin: 0 auto; }
 .lm-canvas { display: block; width: 100%; border-radius: 8px; border: 2px solid #b9a77a; }
-.lm-slot { position: absolute; transform: translate(-50%, -50%); width: auto; min-width: 30px; margin: 0; padding: 3px 7px; font-size: 12px; font-weight: 700;
+.lm-slot { position: absolute; transform: translate(-50%, -50%); width: auto; min-width: 44px; margin: 0; padding: 6px 10px; font-size: 13px; font-weight: 700;
   line-height: 1.2; white-space: nowrap; border-radius: 8px; border: 2px dashed var(--teal); background: rgba(255, 255, 255, .78); color: var(--teal-d); }
 .lm-slot.full { border-style: solid; background: #fff; color: var(--ink); }
 .lm-slot.right { background: #cfe9c4; border: 2px solid #3d8a3a; color: var(--ink); }
 .lm-slot.wrong { background: #f3cfc6; border: 2px solid var(--red); color: var(--ink); }
 @media (max-width: 700px), (max-height: 480px) {
-  .lm-slot { font-size: 10px; padding: 2px 4px; min-width: 22px; }
+  .lm-slot { font-size: 10px; padding: 3px 5px; min-width: 26px; }
+  .lm-fixed { font-size: 9px !important; }
   .koor-canvas { width: min(100%, 112vh); }
   .zoom-canvas { width: min(100%, 52vh * 16 / 9); }
   .zoom-btn { padding: 7px 18px; font-size: 15px; }
@@ -328,3 +330,20 @@ button:disabled { opacity: .45; cursor: default; transform: none; }
 /* Kısa ekranda etkileşim kutusu ortayı kapatmasın; drone etiketi joystick altında kalmasın */
 @media (max-height: 480px) { .touch #prompt { bottom: 58px; } }
 .touch #viewfinder span { left: auto; right: 12px; bottom: auto; top: 8px; }
+
+/* ---------- Öğrenci geri bildirimi sonrası: sürükle-bırak, geniş fark bulma, konuşma balonu ---------- */
+.act-panel.wide { width: min(1120px, 100%); }
+.cloze-head { margin: 10px 0 0; font-size: 15px; color: var(--teal-d); letter-spacing: .02em; }
+.nb-chip { touch-action: none; cursor: grab; }
+.nb-chip.dragging { opacity: .35; }
+.drag-ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -60%) scale(1.06); margin: 0; width: auto;
+  box-shadow: 0 8px 22px rgba(8, 30, 40, .4); background: var(--gold); border-color: #a8780f; cursor: grabbing; }
+.picking .nb-slot:not(.full), .picking .lm-slot:not(.full) { background: #fff3c9; border-color: var(--gold); animation: slotpulse 1s infinite; }
+.nb-slot.over, .lm-slot.over { background: var(--gold) !important; border-color: #a8780f !important; border-style: solid; color: var(--ink); }
+.lm-slot:hover { background: #fff; transform: translate(-50%, -50%); }
+@keyframes slotpulse { 50% { box-shadow: 0 0 0 5px rgba(224, 165, 47, .35); } }
+.lm-fixed { position: absolute; transform: translate(-50%, -50%); font-size: 12px; font-weight: 700; font-style: italic; white-space: nowrap; pointer-events: none;
+  color: var(--ink); text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
+#bubble { position: fixed; z-index: 3; transform: translate(-50%, -100%); max-width: 240px; padding: 7px 12px; border-radius: 14px; background: #fff; color: var(--ink);
+  font-size: 14px; font-weight: 600; line-height: 1.3; text-align: center; box-shadow: 0 4px 14px rgba(8, 30, 40, .35); pointer-events: none; }
+#bubble::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fff; }

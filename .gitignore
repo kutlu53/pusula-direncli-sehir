@@ -1,3 +1,4 @@
 node_modules/
 dist/
 test/cikti/
+test/cikti_dokunmatik/
